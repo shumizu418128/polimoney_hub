@@ -1,0 +1,34 @@
+{
+  "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
+  "tasks": {
+    "dev": "deno run --allow-net --allow-env --allow-read --watch api/index.ts",
+    "start": "deno run --allow-net --allow-env --allow-read api/index.ts",
+    "test": "deno test --allow-net --allow-env --allow-read",
+    "seed": "deno run --allow-net db/seed.ts",
+    "migrate": "deno run --allow-net --allow-env --allow-read db/migrate.ts",
+    "admin:dev": "cd admin && deno task start",
+    "admin:build": "cd admin && deno task build",
+    "fmt": "deno fmt",
+    "lint": "deno lint"
+  },
+  "imports": {
+    "hono": "jsr:@hono/hono@^4.6.0",
+    "hono/": "jsr:@hono/hono@^4.6.0/",
+    "mssql": "npm:mssql@11.0.1",
+    "std/": "https://deno.land/std@0.224.0/",
+    "std/dotenv/load.ts": "https://deno.land/std@0.224.0/dotenv/load.ts"
+  },
+  "compilerOptions": {
+    "strict": true
+  },
+  "fmt": {
+    "indentWidth": 2,
+    "singleQuote": false
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  }
+}
+

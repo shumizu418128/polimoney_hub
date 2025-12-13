@@ -1,0 +1,49 @@
+services:
+  app:
+    image: denoland/deno:2.1.4
+    volumes:
+      - ..:/workspace:cached
+    working_dir: /workspace
+    command: sleep infinity
+    env_file:
+      - ../.env
+    environment:
+      # .env がない場合のデフォルト値（開発用）
+      DENO_ENV: ${DENO_ENV:-development}
+      PORT: ${PORT:-8000}
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@db:5432/polimoney_hub}
+      API_KEY: ${API_KEY:-dev-api-key-12345}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-dev-admin-key-67890}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8000}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - polimoney-network
+
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: polimoney_hub
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d polimoney_hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - polimoney-network
+
+volumes:
+  postgres-data:
+
+networks:
+  polimoney-network:
+    external: true
