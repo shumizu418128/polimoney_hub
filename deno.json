@@ -4,6 +4,7 @@
     "dev": "deno run --allow-net --allow-env --allow-read --watch api/index.ts",
     "start": "deno run --allow-net --allow-env --allow-read api/index.ts",
     "test": "deno test --allow-net --allow-env --allow-read",
+    "test:db": "deno run --allow-net --allow-env --allow-read db/test-connection.ts",
     "seed": "deno run --allow-net db/seed.ts",
     "migrate": "deno run --allow-net --allow-env --allow-read db/migrate.ts",
     "admin:dev": "cd admin && deno task start",
@@ -31,4 +32,3 @@
     }
   }
 }
-

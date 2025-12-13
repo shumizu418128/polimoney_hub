@@ -146,12 +146,17 @@ CREATE TABLE public_journals (
     ledger_id UNIQUEIDENTIFIER NOT NULL REFERENCES public_ledgers(id),
     journal_source_id UNIQUEIDENTIFIER NOT NULL,
     date DATE NOT NULL,
-    description NVARCHAR(MAX),
+    description NVARCHAR(MAX),                      -- 摘要（Polimoney: purpose）
     amount INT NOT NULL,
     -- 匿名化済みデータ
     contact_name NVARCHAR(MAX),
     contact_type VARCHAR(20),
-    account_code VARCHAR(50),
+    account_code VARCHAR(50),                       -- 勘定科目コード（Polimoney: category を導出）
+    -- Polimoney 連携用追加フィールド
+    classification VARCHAR(20),                     -- 'campaign' or 'pre-campaign'（選挙台帳のみ）
+    non_monetary_basis NVARCHAR(MAX),               -- 金銭以外の寄附の見積根拠
+    note NVARCHAR(MAX),                             -- 備考
+    public_expense_amount INT,                      -- 公費負担額（0の場合はNULL）
     -- 改ざん検知用
     content_hash VARCHAR(64) NOT NULL,
     synced_at DATETIME2 NOT NULL,

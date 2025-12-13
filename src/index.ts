@@ -1,3 +1,10 @@
+// ローカル開発時のみ .env を読み込む（Deno Deploy では不要）
+try {
+  await import("std/dotenv/load.ts");
+} catch {
+  // Deno Deploy では .env ファイルがないのでスキップ
+}
+
 import { Hono } from "hono";
 import { cors } from "jsr:@hono/hono@^4.6.0/cors";
 import { logger } from "jsr:@hono/hono@^4.6.0/logger";
