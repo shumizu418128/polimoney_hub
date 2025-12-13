@@ -1,15 +1,44 @@
-# Polimoney Hub 環境変数
-# このファイルを .env にコピーして使用してください
+# 開発環境用のサンプル
+# このファイルをコピーして .env を作成してください
+# cp env-example.txt .env
 
-# 実行環境
+# ============================================
+# Hub API 設定
+# ============================================
 DENO_ENV=development
-
-# サーバー設定
 PORT=8000
 
-# Azure PostgreSQL 接続
-DATABASE_URL=postgres://user:password@your-server.postgres.database.azure.com:5432/polimoney_hub?sslmode=require
+# データベース接続（Azure SQL Database）
+# Server=<server>.database.windows.net;Database=<db>;User Id=<user>;Password=<pass>;Encrypt=true
+DATABASE_URL=Server=polimoney-sql.database.windows.net;Database=DB_NAME;User Id=YOUR_ID;Password=YOUR_PASSWORD;Encrypt=true
 
-# API Key (サービス間認証)
-API_KEY=your-secure-api-key-here
+# 開発用スキーマを使用するか（true = dev スキーマ、false/未設定 = dbo スキーマ）
+# チーム開発時は true に設定してダミーデータを使用
+USE_DEV_SCHEMA=true
 
+# API認証キー（Ledger → Hub）
+# ランダムな文字列を生成: openssl rand -hex 32
+API_KEY=
+
+# 管理者認証キー（Admin UI → Hub）
+# ランダムな文字列を生成: openssl rand -hex 32
+ADMIN_API_KEY=
+
+# ============================================
+# Hub Admin UI 設定
+# ============================================
+# Admin UI が Hub API に接続する URL
+API_BASE_URL=http://localhost:8000
+
+# Admin UI のポート（デフォルト: 3002）
+# ADMIN_PORT=3002
+
+# ============================================
+# スキーマの使い分け
+# ============================================
+# USE_DEV_SCHEMA=true の場合:
+#   - municipalities, districts → dbo スキーマ（本番データを共用）
+#   - その他のテーブル → dev スキーマ（ダミーデータ）
+#
+# USE_DEV_SCHEMA=false または未設定の場合:
+#   - すべてのテーブル → dbo スキーマ（本番データ）

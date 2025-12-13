@@ -21,11 +21,23 @@
         "editor.defaultFormatter": "denoland.vscode-deno",
         "[typescript]": {
           "editor.defaultFormatter": "denoland.vscode-deno"
+        },
+        "workbench.colorCustomizations": {
+          "titleBar.activeBackground": "#1e5128",
+          "titleBar.activeForeground": "#ffffff",
+          "titleBar.inactiveBackground": "#1e5128cc",
+          "titleBar.inactiveForeground": "#ffffffcc",
+          "activityBar.background": "#1e5128",
+          "activityBar.foreground": "#ffffff",
+          "statusBar.background": "#2e7d32",
+          "statusBar.foreground": "#ffffff",
+          "sideBar.border": "#4caf50",
+          "activityBar.activeBorder": "#4caf50"
         }
       }
     }
   },
-  "forwardPorts": [8000, 5432],
-  "postCreateCommand": "deno cache src/index.ts || true"
+  "forwardPorts": [8000, 3002, 5432],
+  "postCreateCommand": "deno cache api/index.ts || true"
 }
 

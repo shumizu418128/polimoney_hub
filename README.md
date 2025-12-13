@@ -94,10 +94,12 @@ curl -H "X-API-Key: your-api-key" \
 
 ## ドキュメント
 
-| ドキュメント                                 | 内容               |
-| -------------------------------------------- | ------------------ |
-| [docs/API.md](docs/API.md)                   | API 詳細仕様       |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | アーキテクチャ設計 |
+| ドキュメント                                       | 内容                       |
+| -------------------------------------------------- | -------------------------- |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)         | 開発環境セットアップ       |
+| [docs/API.md](docs/API.md)                         | API 詳細仕様               |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)       | アーキテクチャ設計         |
+| [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) | エコシステム全体の設計方針 |
 
 ## 関連リポジトリ
 

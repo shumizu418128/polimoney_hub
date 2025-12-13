@@ -1,3 +1,4 @@
+import "std/dotenv/load.ts";
 import { Hono } from "hono";
 import { cors } from "jsr:@hono/hono@^4.6.0/cors";
 import { logger } from "jsr:@hono/hono@^4.6.0/logger";

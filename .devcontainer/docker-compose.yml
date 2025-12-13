@@ -5,14 +5,21 @@ services:
       - ..:/workspace:cached
     working_dir: /workspace
     command: sleep infinity
+    env_file:
+      - ../.env
     environment:
-      DENO_ENV: development
-      PORT: "8000"
-      DATABASE_URL: postgres://postgres:postgres@db:5432/polimoney_hub
-      API_KEY: dev-api-key-12345
+      # .env がない場合のデフォルト値（開発用）
+      DENO_ENV: ${DENO_ENV:-development}
+      PORT: ${PORT:-8000}
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@db:5432/polimoney_hub}
+      API_KEY: ${API_KEY:-dev-api-key-12345}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-dev-admin-key-67890}
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8000}
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - polimoney-network
 
   db:
     image: postgres:15
@@ -31,7 +38,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - polimoney-network
 
 volumes:
   postgres-data:
 
+networks:
+  polimoney-network:
+    external: true
