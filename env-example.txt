@@ -12,15 +12,23 @@ PORT=8000
 # Server=<server>.database.windows.net;Database=<db>;User Id=<user>;Password=<pass>;Encrypt=true
 DATABASE_URL=Server=polimoney-sql.database.windows.net;Database=DB_NAME;User Id=YOUR_ID;Password=YOUR_PASSWORD;Encrypt=true
 
-# 開発用スキーマを使用するか（true = dev スキーマ、false/未設定 = dbo スキーマ）
-# チーム開発時は true に設定してダミーデータを使用
-USE_DEV_SCHEMA=true
-
-# API認証キー（Ledger → Hub）
+# ============================================
+# API認証キー（スキーマ切り替え）
+# ============================================
+# 本番用APIキー → dbo スキーマ（本番データ）
+# 開発用APIキー → dev スキーマ（ダミーデータ）
+#
 # ランダムな文字列を生成: openssl rand -hex 32
-API_KEY=
 
+# 本番用（Polimoney本番、Ledger本番が使用）
+API_KEY_PROD=
+
+# 開発用（Polimoney開発、Ledger開発が使用）
+API_KEY_DEV=
+
+# ============================================
 # 管理者認証キー（Admin UI → Hub）
+# ============================================
 # ランダムな文字列を生成: openssl rand -hex 32
 ADMIN_API_KEY=
 
@@ -34,11 +42,16 @@ API_BASE_URL=http://localhost:8000
 # ADMIN_PORT=3002
 
 # ============================================
-# スキーマの使い分け
+# スキーマの使い分け（APIキーで自動切り替え）
 # ============================================
-# USE_DEV_SCHEMA=true の場合:
-#   - municipalities, districts → dbo スキーマ（本番データを共用）
-#   - その他のテーブル → dev スキーマ（ダミーデータ）
 #
-# USE_DEV_SCHEMA=false または未設定の場合:
-#   - すべてのテーブル → dbo スキーマ（本番データ）
+# クライアントが API_KEY_PROD を使ってリクエスト:
+#   → すべてのテーブル → dbo スキーマ（本番データ）
+#
+# クライアントが API_KEY_DEV を使ってリクエスト:
+#   → municipalities, districts → dbo スキーマ（本番データを共用）
+#   → その他のテーブル → dev スキーマ（ダミーデータ）
+#
+# クライアント（Polimoney / Ledger）側の設定例:
+#   本番環境 → HUB_API_KEY=<API_KEY_PRODの値>
+#   開発環境 → HUB_API_KEY=<API_KEY_DEVの値>

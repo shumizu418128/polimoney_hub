@@ -360,31 +360,65 @@ polimoney-sql（Azure SQL Database）
     └── organization_requests
 ```
 
-### 切り替え方法
+### 切り替え方法（APIキー）
 
-**.env で設定:**
+**Hub側の .env:**
 
 ```bash
-# 開発時（ダミーデータを使用）
-USE_DEV_SCHEMA=true
+# 本番用APIキー → dbo スキーマ
+API_KEY_PROD=xxxxx
 
-# 本番（本番データを使用）
-USE_DEV_SCHEMA=false  # または未設定
+# 開発用APIキー → dev スキーマ
+API_KEY_DEV=yyyyy
 ```
 
-### API での使い方
+**Polimoney / Ledger 側の .env:**
+
+```bash
+# 本番環境
+HUB_API_KEY=xxxxx  # API_KEY_PROD の値
+
+# 開発環境
+HUB_API_KEY=yyyyy  # API_KEY_DEV の値
+```
+
+### 動作イメージ
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                        Hub API                           │
+│                                                          │
+│    API_KEY_PROD → dbo（本番データ）                      │
+│    API_KEY_DEV  → dev（ダミーデータ）                    │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+           ▲                    ▲
+           │                    │
+    ┌──────┴──────┐      ┌──────┴──────┐
+    │  Polimoney   │      │   Ledger    │
+    ├─────────────┤      ├─────────────┤
+    │ 本番: PROD   │      │ 本番: PROD   │
+    │ 開発: DEV    │      │ 開発: DEV    │
+    └─────────────┘      └─────────────┘
+```
+
+### Hub API 内部での使い方
 
 ```typescript
-import { tables } from "./db/schema.ts";
+import { createTableHelper } from "api/db/schema.ts";
 
-// スキーマに応じて自動的に切り替わる
-const sql = `SELECT * FROM ${tables.politicians}`;
-// USE_DEV_SCHEMA=true  → "SELECT * FROM dev.politicians"
-// USE_DEV_SCHEMA=false → "SELECT * FROM dbo.politicians"
+app.get("/api/politicians", (c) => {
+  const apiKey = c.req.header("X-API-Key");
+  const tables = createTableHelper(apiKey);
 
-// municipalities, districts は常に dbo（本番データ）
-const sql2 = `SELECT * FROM ${tables.municipalities}`;
-// → "SELECT * FROM dbo.municipalities"
+  const sql = `SELECT * FROM ${tables.politicians}`;
+  // API_KEY_PROD → "SELECT * FROM dbo.politicians"
+  // API_KEY_DEV  → "SELECT * FROM dev.politicians"
+
+  // municipalities, districts は常に dbo（本番データ）
+  const sql2 = `SELECT * FROM ${tables.municipalities}`;
+  // → "SELECT * FROM dbo.municipalities"
+});
 ```
 
 ### セットアップ手順
@@ -396,8 +430,13 @@ const sql2 = `SELECT * FROM ${tables.municipalities}`;
 # 2. ダミーデータを投入
 # Azure Portal → クエリエディター → db/seed-dev.sql を実行
 
-# 3. .env を設定
-USE_DEV_SCHEMA=true
+# 3. Hub の .env を設定
+API_KEY_PROD=<本番用キー>
+API_KEY_DEV=<開発用キー>
+
+# 4. Polimoney / Ledger の .env を設定
+# 本番環境: HUB_API_KEY=<本番用キー>
+# 開発環境: HUB_API_KEY=<開発用キー>
 ```
 
 ### ダミーデータ内容
