@@ -33,15 +33,40 @@ Polimoney エコシステムの中核となるデータハブサービス。
 
 ## クイックスタート
 
+### 方法 1: Dev Container（推奨）
+
+VS Code / Cursor で開き、「Reopen in Container」を選択するだけ！
+
+```
+1. VS Code / Cursor でこのフォルダを開く
+2. 左下の「><」アイコン → 「Reopen in Container」
+3. 自動的に環境構築（Deno + PostgreSQL）
+4. ターミナルで: deno task dev
+```
+
+**含まれるもの:**
+- Deno ランタイム
+- PostgreSQL（スキーマ自動適用）
+- VS Code 拡張機能（Deno, PostgreSQL）
+
+### 方法 2: 手動セットアップ
+
 ```bash
 # 1. 環境変数を設定
 cp env-example.txt .env
 # .env を編集
 
-# 2. DB スキーマを適用
+# 2. PostgreSQL を起動（Docker）
+docker run -d --name polimoney-hub-db \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=polimoney_hub \
+  -p 5432:5432 \
+  postgres:15
+
+# 3. DB スキーマを適用
 psql $DATABASE_URL -f db/schema.sql
 
-# 3. 開発サーバー起動
+# 4. 開発サーバー起動
 deno task dev
 ```
 

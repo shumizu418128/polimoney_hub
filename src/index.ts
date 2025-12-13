@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { logger } from "hono/logger";
+import { cors } from "jsr:@hono/hono@^4.6.0/cors";
+import { logger } from "jsr:@hono/hono@^4.6.0/logger";
 import { apiKeyAuth } from "./middleware/auth.ts";
 import { politiciansRouter } from "./routes/politicians.ts";
 import { organizationsRouter } from "./routes/organizations.ts";
@@ -43,6 +43,11 @@ app.notFound((c) => {
 // Error handler
 app.onError((err, c) => {
   console.error(`Error: ${err.message}`);
+  console.error(err.stack);
+  // 開発環境ではエラー詳細を返す
+  if (Deno.env.get("DENO_ENV") === "development") {
+    return c.json({ error: err.message, stack: err.stack }, 500);
+  }
   return c.json({ error: "Internal Server Error" }, 500);
 });
 

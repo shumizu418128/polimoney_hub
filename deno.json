@@ -8,8 +8,8 @@
     "lint": "deno lint"
   },
   "imports": {
-    "hono": "https://deno.land/x/hono@v4.3.11/mod.ts",
-    "hono/": "https://deno.land/x/hono@v4.3.11/",
+    "hono": "jsr:@hono/hono@^4.6.0",
+    "hono/": "jsr:@hono/hono@^4.6.0/",
     "postgres": "https://deno.land/x/postgres@v0.19.3/mod.ts",
     "std/": "https://deno.land/std@0.224.0/"
   },
