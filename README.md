@@ -11,94 +11,95 @@ Polimoney エコシステムの中核となるデータハブサービス。
                     │ (Deno + Hono)   │
                     └────────┬────────┘
                              │
-         ┌───────────────────┼───────────────────┐
-         ▼                   ▼                   ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│ Ledger          │ │ Azure DB        │ │ Polimoney       │
-│ (Supabase)      │ │ (PostgreSQL)    │ │ (可視化)        │
-│ 仕訳データ      │ │ 共通識別子      │ │ データ表示      │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
+         ┌───────────────────┴───────────────────┐
+         ▼                                       ▼
+┌─────────────────┐                     ┌─────────────────┐
+│ Ledger          │                     │ Polimoney       │
+│ (Supabase)      │                     │ (可視化)        │
+│ 仕訳データ      │                     │ データ表示      │
+└─────────────────┘                     └─────────────────┘
 ```
 
 詳細: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 ## 技術スタック
 
-| 項目           | 技術             |
-| -------------- | ---------------- |
-| ランタイム     | Deno             |
-| フレームワーク | Hono             |
-| データベース   | Azure PostgreSQL |
-| ホスティング   | Deno Deploy      |
+| 項目               | 技術                  |
+| ------------------ | --------------------- |
+| ランタイム         | Deno                  |
+| API フレームワーク | Hono                  |
+| 管理画面           | Fresh                 |
+| データベース       | Supabase (PostgreSQL) |
+| 認証               | Supabase Auth         |
+| ホスティング       | Deno Deploy           |
 
 ## クイックスタート
 
-### 方法 1: Dev Container（推奨）
+### 1. 環境変数を設定
+
+```bash
+cp env-example.txt .env
+# .env を編集（Supabase の接続情報を入力）
+```
+
+### 2. Supabase プロジェクトをセットアップ
+
+1. [Supabase Dashboard](https://supabase.com/dashboard) でプロジェクト作成
+2. SQL Editor で `db/schema-supabase.sql` を実行
+3. Settings > API から接続情報を取得し `.env` に設定
+
+### 3. 開発サーバー起動
+
+```bash
+# API サーバー
+deno task dev
+
+# 管理画面（別ターミナル）
+cd admin && deno task start
+```
+
+### Dev Container（オプション）
 
 VS Code / Cursor で開き、「Reopen in Container」を選択するだけ！
-
-```
-1. VS Code / Cursor でこのフォルダを開く
-2. 左下の「><」アイコン → 「Reopen in Container」
-3. 自動的に環境構築（Deno + PostgreSQL）
-4. ターミナルで: deno task dev
-```
 
 **含まれるもの:**
 
 - Deno ランタイム
-- PostgreSQL（スキーマ自動適用）
-- VS Code 拡張機能（Deno, PostgreSQL）
-
-### 方法 2: 手動セットアップ
-
-```bash
-# 1. 環境変数を設定
-cp env-example.txt .env
-# .env を編集
-
-# 2. PostgreSQL を起動（Docker）
-docker run -d --name polimoney-hub-db \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=polimoney_hub \
-  -p 5432:5432 \
-  postgres:15
-
-# 3. DB スキーマを適用
-psql $DATABASE_URL -f db/schema.sql
-
-# 4. 開発サーバー起動
-deno task dev
-```
+- VS Code 拡張機能（Deno）
 
 ## API 概要
 
-| エンドポイント          | 説明           |
-| ----------------------- | -------------- |
-| `GET /health`           | ヘルスチェック |
-| `/api/v1/politicians`   | 政治家 CRUD    |
-| `/api/v1/organizations` | 政治団体 CRUD  |
-| `/api/v1/elections`     | 選挙 CRUD      |
+| エンドポイント          | 説明           | 認証         |
+| ----------------------- | -------------- | ------------ |
+| `GET /health`           | ヘルスチェック | 不要         |
+| `/api/v1/politicians`   | 政治家 CRUD    | API Key      |
+| `/api/v1/organizations` | 政治団体 CRUD  | API Key      |
+| `/api/v1/elections`     | 選挙 CRUD      | API Key      |
+| `/api/auth/login`       | ログイン       | 不要         |
+| `/api/admin/*`          | 管理 API       | Bearer Token |
 
 詳細: [docs/API.md](docs/API.md)
 
 ## 認証
 
-API Key 認証を使用します。
+### API 認証（Ledger/Polimoney 向け）
 
 ```bash
 curl -H "X-API-Key: your-api-key" \
-     -H "X-Service-Name: polimoney-ledger" \
      http://localhost:8000/api/v1/politicians
 ```
 
+### 管理画面認証
+
+Supabase Auth を使用。管理者はメール + パスワードでログインし、JWT トークンで認証します。
+
 ## ドキュメント
 
-| ドキュメント                                       | 内容                       |
-| -------------------------------------------------- | -------------------------- |
-| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)         | 開発環境セットアップ       |
-| [docs/API.md](docs/API.md)                         | API 詳細仕様               |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)       | アーキテクチャ設計         |
+| ドキュメント                                         | 内容                       |
+| ---------------------------------------------------- | -------------------------- |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)           | 開発環境セットアップ       |
+| [docs/API.md](docs/API.md)                           | API 詳細仕様               |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)         | アーキテクチャ設計         |
 | [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) | エコシステム全体の設計方針 |
 
 ## 関連リポジトリ

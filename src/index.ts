@@ -19,6 +19,7 @@ import { electionRequestsRouter } from "./routes/election-requests.ts";
 import { organizationRequestsRouter } from "./routes/organization-requests.ts";
 import { adminRouter } from "./routes/admin.ts";
 import { syncRouter } from "./routes/sync.ts";
+import { authRouter } from "./routes/auth.ts";
 
 const app = new Hono();
 
@@ -54,6 +55,9 @@ api.route("/sync", syncRouter);
 const admin = new Hono();
 admin.use("*", adminAuth);
 admin.route("/", adminRouter);
+
+// Auth routes (認証不要 - ログイン用)
+app.route("/api/auth", authRouter);
 
 // 注意: admin を先にマウントしないと /api/v1/* のミドルウェアが適用される
 app.route("/api/admin", admin);

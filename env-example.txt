@@ -1,0 +1,24 @@
+# Polimoney Hub 環境変数
+
+# ===========================================
+# Supabase 接続設定
+# ===========================================
+# Supabase Dashboard > Settings > API から取得
+
+# Project URL
+SUPABASE_URL=https://gpevkinxnlqfhnecuetn.supabase.co
+
+# Publishable key（旧 anon key）- クライアント認証用
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxxxx
+
+# Secret key（旧 service_role key）- サーバーサイド用（絶対に公開しない！）
+SUPABASE_SECRET_KEY=sb_secret_xxxxx
+
+# ===========================================
+# API 認証キー（Ledger からのアクセス用）
+# ===========================================
+# 本番環境用 API キー
+API_KEY_PROD=your-production-api-key-here
+
+# 開発環境用 API キー
+API_KEY_DEV=your-development-api-key-here

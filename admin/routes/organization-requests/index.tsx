@@ -1,5 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import Layout from "../../components/Layout.tsx";
+import { AuthState } from "../_middleware.ts";
 
 interface OrganizationRequest {
   id: string;
@@ -46,18 +47,17 @@ const statusLabels: Record<string, { label: string; class: string }> = {
   needs_info: { label: "要追加情報", class: "badge-info" },
 };
 
-export const handler: Handlers<PageData> = {
+export const handler: Handlers<PageData, AuthState> = {
   async GET(req, ctx) {
     const url = new URL(req.url);
     const status = url.searchParams.get("status") || "";
 
     const apiBase = Deno.env.get("API_BASE_URL") || "http://localhost:8000";
-    const adminKey = Deno.env.get("ADMIN_API_KEY") || "dev-admin-key-67890";
 
     try {
       const queryParams = status ? `?status=${status}` : "";
       const res = await fetch(`${apiBase}/api/admin/organization-requests${queryParams}`, {
-        headers: { "X-Admin-Key": adminKey },
+        headers: { Authorization: `Bearer ${ctx.state.accessToken}` },
       });
       const data = await res.json();
 

@@ -1,40 +1,47 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import Layout from "../components/Layout.tsx";
+import { AuthState } from "./_middleware.ts";
 
 interface DashboardData {
   pendingElectionRequests: number;
   pendingOrganizationRequests: number;
   totalElections: number;
   totalOrganizations: number;
+  totalAdminUsers: number;
   error?: string;
 }
 
-export const handler: Handlers<DashboardData> = {
+export const handler: Handlers<DashboardData, AuthState> = {
   async GET(_req, ctx) {
     const apiBase = Deno.env.get("API_BASE_URL") || "http://localhost:8000";
-    const adminKey = Deno.env.get("ADMIN_API_KEY") || "dev-admin-key-67890";
+    const authHeader = { Authorization: `Bearer ${ctx.state.accessToken}` };
+    const apiKey = Deno.env.get("API_KEY_DEV") || Deno.env.get("API_KEY_PROD") || "dev-api-key";
 
     try {
-      const [electionReqRes, orgReqRes, electionsRes, orgsRes] = await Promise.all([
+      const [electionReqRes, orgReqRes, electionsRes, orgsRes, usersRes] = await Promise.all([
         fetch(`${apiBase}/api/admin/election-requests?status=pending`, {
-          headers: { "X-Admin-Key": adminKey },
+          headers: authHeader,
         }),
         fetch(`${apiBase}/api/admin/organization-requests?status=pending`, {
-          headers: { "X-Admin-Key": adminKey },
+          headers: authHeader,
         }),
         fetch(`${apiBase}/api/v1/elections`, {
-          headers: { "X-API-Key": Deno.env.get("API_KEY") || "dev-api-key-12345" },
+          headers: { "X-API-Key": apiKey },
         }),
         fetch(`${apiBase}/api/v1/organizations`, {
-          headers: { "X-API-Key": Deno.env.get("API_KEY") || "dev-api-key-12345" },
+          headers: { "X-API-Key": apiKey },
+        }),
+        fetch(`${apiBase}/api/admin/users`, {
+          headers: authHeader,
         }),
       ]);
 
-      const [electionReqData, orgReqData, electionsData, orgsData] = await Promise.all([
+      const [electionReqData, orgReqData, electionsData, orgsData, usersData] = await Promise.all([
         electionReqRes.json(),
         orgReqRes.json(),
         electionsRes.json(),
         orgsRes.json(),
+        usersRes.json(),
       ]);
 
       return ctx.render({
@@ -42,6 +49,7 @@ export const handler: Handlers<DashboardData> = {
         pendingOrganizationRequests: orgReqData.data?.length || 0,
         totalElections: electionsData.data?.length || 0,
         totalOrganizations: orgsData.data?.length || 0,
+        totalAdminUsers: usersData.data?.filter((u: { is_active: boolean }) => u.is_active).length || 0,
       });
     } catch (error) {
       return ctx.render({
@@ -49,6 +57,7 @@ export const handler: Handlers<DashboardData> = {
         pendingOrganizationRequests: 0,
         totalElections: 0,
         totalOrganizations: 0,
+        totalAdminUsers: 0,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -83,6 +92,13 @@ export default function Dashboard({ data }: PageProps<DashboardData>) {
       value: data.totalOrganizations,
       icon: "🏢",
       href: "/organizations",
+      color: "bg-base-100",
+    },
+    {
+      title: "管理者ユーザー",
+      value: data.totalAdminUsers,
+      icon: "👥",
+      href: "/users",
       color: "bg-base-100",
     },
   ];

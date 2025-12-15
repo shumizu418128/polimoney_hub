@@ -1,33 +1,17 @@
 import { Hono } from "hono";
-import { query, queryOne } from "../db/client.ts";
+import { getServiceClient } from "../lib/supabase.ts";
 
 export const electionsRouter = new Hono();
 
 interface Election {
-  id: string; // 例: HR-13-01-20241027
+  id: string;
   name: string;
-  type: string; // HR, HC, PG, CM, GM
-  area_code: string; // 都道府県コード(2桁) + 選挙区番号(2桁)
-  election_date: Date;
-  created_at: Date;
-  updated_at: Date;
-}
-
-/**
- * 選挙 ID を生成
- * 形式: {type}-{area_code}-{date}
- * 例: HR-13-01-20241027
- */
-function generateElectionId(
-  type: string,
-  areaCode: string,
-  electionDate: Date
-): string {
-  const dateStr = electionDate
-    .toISOString()
-    .split("T")[0]
-    .replace(/-/g, "");
-  return `${type}-${areaCode}-${dateStr}`;
+  type: string;
+  district_id: string | null;
+  election_date: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // 選挙一覧取得
@@ -35,53 +19,64 @@ electionsRouter.get("/", async (c) => {
   const type = c.req.query("type");
   const year = c.req.query("year");
 
-  let sql = "SELECT * FROM elections WHERE 1=1";
-  const args: unknown[] = [];
-  let argIndex = 1;
+  const supabase = getServiceClient();
+  let query = supabase.from("elections").select("*");
 
   if (type) {
-    sql += ` AND type = $${argIndex++}`;
-    args.push(type);
+    query = query.eq("type", type);
   }
 
   if (year) {
-    sql += ` AND EXTRACT(YEAR FROM election_date) = $${argIndex++}`;
-    args.push(parseInt(year));
+    // election_date の年でフィルター
+    const startDate = `${year}-01-01`;
+    const endDate = `${year}-12-31`;
+    query = query.gte("election_date", startDate).lte("election_date", endDate);
   }
 
-  sql += " ORDER BY election_date DESC";
+  query = query.order("election_date", { ascending: false });
 
-  const elections = await query<Election>(sql, args);
-  return c.json({ data: elections });
+  const { data, error } = await query;
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ data });
 });
 
 // 選挙取得
 electionsRouter.get("/:id", async (c) => {
   const id = c.req.param("id");
-  const election = await queryOne<Election>(
-    "SELECT * FROM elections WHERE id = $1",
-    [id]
-  );
 
-  if (!election) {
-    return c.json({ error: "Election not found" }, 404);
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from("elections")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return c.json({ error: "Election not found" }, 404);
+    }
+    return c.json({ error: error.message }, 500);
   }
 
-  return c.json({ data: election });
+  return c.json({ data });
 });
 
-// 選挙 ID 発行
+// 選挙作成
 electionsRouter.post("/", async (c) => {
   const body = await c.req.json<{
     name: string;
     type: string;
-    area_code: string;
-    election_date: string; // ISO 8601 形式
+    district_id?: string;
+    election_date: string;
   }>();
 
-  if (!body.name || !body.type || !body.area_code || !body.election_date) {
+  if (!body.name || !body.type || !body.election_date) {
     return c.json(
-      { error: "name, type, area_code, and election_date are required" },
+      { error: "name, type, and election_date are required" },
       400
     );
   }
@@ -95,27 +90,23 @@ electionsRouter.post("/", async (c) => {
     );
   }
 
-  const electionDate = new Date(body.election_date);
-  const id = generateElectionId(body.type, body.area_code, electionDate);
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from("elections")
+    .insert({
+      name: body.name,
+      type: body.type,
+      district_id: body.district_id || null,
+      election_date: body.election_date,
+    })
+    .select()
+    .single();
 
-  // 既存チェック
-  const existing = await queryOne<Election>(
-    "SELECT id FROM elections WHERE id = $1",
-    [id]
-  );
-
-  if (existing) {
-    return c.json({ error: "Election with this ID already exists", id }, 409);
+  if (error) {
+    return c.json({ error: error.message }, 500);
   }
 
-  const result = await query<Election>(
-    `INSERT INTO elections (id, name, type, area_code, election_date) 
-     VALUES ($1, $2, $3, $4, $5) 
-     RETURNING *`,
-    [id, body.name, body.type, body.area_code, electionDate]
-  );
-
-  return c.json({ data: result[0] }, 201);
+  return c.json({ data }, 201);
 });
 
 // 選挙更新
@@ -123,22 +114,23 @@ electionsRouter.put("/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json<{ name?: string }>();
 
-  // 選挙 ID は不変（type, area_code, date から生成されるため）
-  // 更新可能なのは name のみ
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from("elections")
+    .update({
+      name: body.name,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
 
-  const result = await query<Election>(
-    `UPDATE elections 
-     SET name = COALESCE($2, name),
-         updated_at = NOW()
-     WHERE id = $1
-     RETURNING *`,
-    [id, body.name]
-  );
-
-  if (result.length === 0) {
-    return c.json({ error: "Election not found" }, 404);
+  if (error) {
+    if (error.code === "PGRST116") {
+      return c.json({ error: "Election not found" }, 404);
+    }
+    return c.json({ error: error.message }, 500);
   }
 
-  return c.json({ data: result[0] });
+  return c.json({ data });
 });
-

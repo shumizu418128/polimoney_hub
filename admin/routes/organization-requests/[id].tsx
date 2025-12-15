@@ -1,5 +1,6 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import Layout from "../../components/Layout.tsx";
+import { AuthState } from "../_middleware.ts";
 
 interface OrganizationRequest {
   id: string;
@@ -38,11 +39,11 @@ const evidenceTypeLabels: Record<string, string> = {
   financial_report: "政治資金収支報告書の表紙",
 };
 
-export const handler: Handlers<PageData> = {
+export const handler: Handlers<PageData, AuthState> = {
   async GET(_req, ctx) {
     const { id } = ctx.params;
     const apiBase = Deno.env.get("API_BASE_URL") || "http://localhost:8000";
-    const apiKey = Deno.env.get("API_KEY") || "dev-api-key-12345";
+    const apiKey = Deno.env.get("API_KEY_DEV") || Deno.env.get("API_KEY_PROD") || "dev-api-key";
 
     try {
       const res = await fetch(`${apiBase}/api/v1/organization-requests/${id}`, {
@@ -69,7 +70,8 @@ export const handler: Handlers<PageData> = {
     const action = form.get("action");
 
     const apiBase = Deno.env.get("API_BASE_URL") || "http://localhost:8000";
-    const adminKey = Deno.env.get("ADMIN_API_KEY") || "dev-admin-key-67890";
+    const authHeader = { Authorization: `Bearer ${ctx.state.accessToken}` };
+    const apiKey = Deno.env.get("API_KEY_DEV") || Deno.env.get("API_KEY_PROD") || "dev-api-key";
 
     try {
       if (action === "approve") {
@@ -77,17 +79,17 @@ export const handler: Handlers<PageData> = {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            "X-Admin-Key": adminKey,
+            ...authHeader,
           },
           body: JSON.stringify({
-            reviewed_by: "admin",
+            reviewed_by: ctx.state.user?.name || ctx.state.user?.email || "admin",
           }),
         });
 
         if (!res.ok) {
           const data = await res.json();
           const reqRes = await fetch(`${apiBase}/api/v1/organization-requests/${id}`, {
-            headers: { "X-API-Key": Deno.env.get("API_KEY") || "dev-api-key-12345" },
+            headers: { "X-API-Key": apiKey },
           });
           const reqData = await reqRes.json();
           return ctx.render({ request: reqData.data, error: data.error });
@@ -103,7 +105,7 @@ export const handler: Handlers<PageData> = {
         const reason = form.get("rejection_reason");
         if (!reason) {
           const res = await fetch(`${apiBase}/api/v1/organization-requests/${id}`, {
-            headers: { "X-API-Key": Deno.env.get("API_KEY") || "dev-api-key-12345" },
+            headers: { "X-API-Key": apiKey },
           });
           const data = await res.json();
           return ctx.render({ request: data.data, error: "却下理由を入力してください" });
@@ -113,18 +115,18 @@ export const handler: Handlers<PageData> = {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            "X-Admin-Key": adminKey,
+            ...authHeader,
           },
           body: JSON.stringify({
             rejection_reason: reason,
-            reviewed_by: "admin",
+            reviewed_by: ctx.state.user?.name || ctx.state.user?.email || "admin",
           }),
         });
 
         if (!res.ok) {
           const data = await res.json();
           const reqRes = await fetch(`${apiBase}/api/v1/organization-requests/${id}`, {
-            headers: { "X-API-Key": Deno.env.get("API_KEY") || "dev-api-key-12345" },
+            headers: { "X-API-Key": apiKey },
           });
           const reqData = await reqRes.json();
           return ctx.render({ request: reqData.data, error: data.error });

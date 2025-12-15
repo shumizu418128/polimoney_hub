@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { query, queryOne, execute } from "../db/client.ts";
+import { getServiceClient } from "../lib/supabase.ts";
 
 export const politiciansRouter = new Hono();
 
@@ -7,34 +7,47 @@ interface Politician {
   id: string;
   name: string;
   name_kana: string | null;
-  created_at: Date;
-  updated_at: Date;
+  created_at: string;
+  updated_at: string;
 }
 
 // 政治家一覧取得
 politiciansRouter.get("/", async (c) => {
-  const politicians = await query<Politician>(
-    "SELECT * FROM politicians ORDER BY created_at DESC"
-  );
-  return c.json({ data: politicians });
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from("politicians")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ data });
 });
 
 // 政治家取得
 politiciansRouter.get("/:id", async (c) => {
   const id = c.req.param("id");
-  const politician = await queryOne<Politician>(
-    "SELECT * FROM politicians WHERE id = $1",
-    [id]
-  );
 
-  if (!politician) {
-    return c.json({ error: "Politician not found" }, 404);
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from("politicians")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return c.json({ error: "Politician not found" }, 404);
+    }
+    return c.json({ error: error.message }, 500);
   }
 
-  return c.json({ data: politician });
+  return c.json({ data });
 });
 
-// 政治家 ID 発行
+// 政治家作成
 politiciansRouter.post("/", async (c) => {
   const body = await c.req.json<{ name: string; name_kana?: string }>();
 
@@ -42,14 +55,21 @@ politiciansRouter.post("/", async (c) => {
     return c.json({ error: "name is required" }, 400);
   }
 
-  const result = await query<Politician>(
-    `INSERT INTO politicians (name, name_kana) 
-     VALUES ($1, $2) 
-     RETURNING *`,
-    [body.name, body.name_kana || null]
-  );
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from("politicians")
+    .insert({
+      name: body.name,
+      name_kana: body.name_kana || null,
+    })
+    .select()
+    .single();
 
-  return c.json({ data: result[0] }, 201);
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  return c.json({ data }, 201);
 });
 
 // 政治家更新
@@ -57,20 +77,27 @@ politiciansRouter.put("/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json<{ name?: string; name_kana?: string }>();
 
-  const result = await query<Politician>(
-    `UPDATE politicians 
-     SET name = COALESCE($2, name),
-         name_kana = COALESCE($3, name_kana),
-         updated_at = NOW()
-     WHERE id = $1
-     RETURNING *`,
-    [id, body.name, body.name_kana]
-  );
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
 
-  if (result.length === 0) {
-    return c.json({ error: "Politician not found" }, 404);
+  if (body.name !== undefined) updateData.name = body.name;
+  if (body.name_kana !== undefined) updateData.name_kana = body.name_kana;
+
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from("politicians")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return c.json({ error: "Politician not found" }, 404);
+    }
+    return c.json({ error: error.message }, 500);
   }
 
-  return c.json({ data: result[0] });
+  return c.json({ data });
 });
-

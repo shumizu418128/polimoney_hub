@@ -1,121 +1,159 @@
-import sql from "mssql";
-
-// Azure SQL Database 接続設定
-const connectionString = Deno.env.get("DATABASE_URL");
-
-let pool: sql.ConnectionPool | null = null;
+import { getServiceClient } from "../lib/supabase.ts";
 
 /**
- * 接続文字列をパースして mssql 用の config オブジェクトに変換
- * 形式: Server=xxx.database.windows.net;Database=xxx;User Id=xxx;Password=xxx;Encrypt=true
+ * Supabase クライアントを使用したデータベースアクセス
+ * RLS をバイパスするため service_role キーを使用
  */
-function parseConnectionString(connStr: string): sql.config {
-  const params: Record<string, string> = {};
-
-  connStr.split(";").forEach((part) => {
-    const [key, ...valueParts] = part.split("=");
-    if (key && valueParts.length > 0) {
-      params[key.trim().toLowerCase().replace(/\s/g, "")] =
-        valueParts.join("=");
-    }
-  });
-
-  return {
-    server: params["server"] || "",
-    database: params["database"] || "",
-    user: params["userid"] || params["user"] || "",
-    password: params["password"] || "",
-    options: {
-      encrypt: params["encrypt"]?.toLowerCase() === "true",
-      trustServerCertificate: false,
-    },
-    pool: {
-      max: 10,
-      min: 0,
-      idleTimeoutMillis: 30000,
-    },
-  };
-}
-
-/**
- * 接続プールを取得（シングルトン）
- */
-export async function getPool(): Promise<sql.ConnectionPool> {
-  if (pool && pool.connected) {
-    return pool;
-  }
-
-  if (!connectionString) {
-    throw new Error("DATABASE_URL environment variable is not set");
-  }
-
-  const config = parseConnectionString(connectionString);
-  pool = await new sql.ConnectionPool(config).connect();
-
-  console.log("[DB] Connected to Azure SQL Database");
-  return pool;
-}
 
 /**
  * SELECT クエリを実行して結果を返す
  */
 export async function query<T>(
-  sqlQuery: string,
-  params?: Record<string, unknown>
+  table: string,
+  options?: {
+    select?: string;
+    filter?: Record<string, unknown>;
+    order?: { column: string; ascending?: boolean };
+    limit?: number;
+  }
 ): Promise<T[]> {
-  const pool = await getPool();
-  const request = pool.request();
+  const supabase = getServiceClient();
+  let q = supabase.from(table).select(options?.select || "*");
 
-  // パラメータをバインド
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      request.input(key, value);
+  // フィルター適用
+  if (options?.filter) {
+    for (const [key, value] of Object.entries(options.filter)) {
+      q = q.eq(key, value);
     }
   }
 
-  const result = await request.query(sqlQuery);
-  return result.recordset as T[];
+  // ソート
+  if (options?.order) {
+    q = q.order(options.order.column, { ascending: options.order.ascending ?? true });
+  }
+
+  // リミット
+  if (options?.limit) {
+    q = q.limit(options.limit);
+  }
+
+  const { data, error } = await q;
+
+  if (error) {
+    throw new Error(`Query error: ${error.message}`);
+  }
+
+  return (data || []) as T[];
 }
 
 /**
  * SELECT クエリを実行して最初の1件を返す
  */
 export async function queryOne<T>(
-  sqlQuery: string,
-  params?: Record<string, unknown>
+  table: string,
+  filter: Record<string, unknown>,
+  select?: string
 ): Promise<T | null> {
-  const rows = await query<T>(sqlQuery, params);
-  return rows[0] || null;
-}
+  const supabase = getServiceClient();
+  let q = supabase.from(table).select(select || "*");
 
-/**
- * INSERT/UPDATE/DELETE を実行して影響行数を返す
- */
-export async function execute(
-  sqlQuery: string,
-  params?: Record<string, unknown>
-): Promise<number> {
-  const pool = await getPool();
-  const request = pool.request();
+  for (const [key, value] of Object.entries(filter)) {
+    q = q.eq(key, value);
+  }
 
-  // パラメータをバインド
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      request.input(key, value);
+  const { data, error } = await q.single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      // No rows returned
+      return null;
     }
+    throw new Error(`Query error: ${error.message}`);
   }
 
-  const result = await request.query(sqlQuery);
-  return result.rowsAffected[0] || 0;
+  return data as T;
 }
 
 /**
- * 接続を閉じる
+ * INSERT を実行して結果を返す
  */
-export async function closePool(): Promise<void> {
-  if (pool) {
-    await pool.close();
-    pool = null;
-    console.log("[DB] Connection closed");
+export async function insert<T>(
+  table: string,
+  data: Record<string, unknown> | Record<string, unknown>[]
+): Promise<T[]> {
+  const supabase = getServiceClient();
+  const { data: result, error } = await supabase
+    .from(table)
+    .insert(data)
+    .select();
+
+  if (error) {
+    throw new Error(`Insert error: ${error.message}`);
   }
+
+  return (result || []) as T[];
+}
+
+/**
+ * UPDATE を実行して結果を返す
+ */
+export async function update<T>(
+  table: string,
+  filter: Record<string, unknown>,
+  data: Record<string, unknown>
+): Promise<T[]> {
+  const supabase = getServiceClient();
+  let q = supabase.from(table).update(data);
+
+  for (const [key, value] of Object.entries(filter)) {
+    q = q.eq(key, value);
+  }
+
+  const { data: result, error } = await q.select();
+
+  if (error) {
+    throw new Error(`Update error: ${error.message}`);
+  }
+
+  return (result || []) as T[];
+}
+
+/**
+ * DELETE を実行
+ */
+export async function remove(
+  table: string,
+  filter: Record<string, unknown>
+): Promise<number> {
+  const supabase = getServiceClient();
+  let q = supabase.from(table).delete();
+
+  for (const [key, value] of Object.entries(filter)) {
+    q = q.eq(key, value);
+  }
+
+  const { error, count } = await q;
+
+  if (error) {
+    throw new Error(`Delete error: ${error.message}`);
+  }
+
+  return count || 0;
+}
+
+/**
+ * 生の SQL を実行（複雑なクエリ用）
+ */
+export async function rawQuery<T>(sql: string, params?: unknown[]): Promise<T[]> {
+  const supabase = getServiceClient();
+  const { data, error } = await supabase.rpc("exec_sql", {
+    query: sql,
+    params: params || [],
+  });
+
+  if (error) {
+    throw new Error(`Raw query error: ${error.message}`);
+  }
+
+  return (data || []) as T[];
 }

@@ -5,7 +5,7 @@
     "start": "deno run --allow-net --allow-env --allow-read api/index.ts",
     "test": "deno test --allow-net --allow-env --allow-read",
     "test:db": "deno run --allow-net --allow-env --allow-read db/test-connection.ts",
-    "seed": "deno run --allow-net db/seed.ts",
+    "seed": "deno run --allow-net --allow-env --allow-read db/seed-supabase.ts",
     "migrate": "deno run --allow-net --allow-env --allow-read db/migrate.ts",
     "admin:dev": "cd admin && deno task start",
     "admin:build": "cd admin && deno task build",
@@ -15,7 +15,7 @@
   "imports": {
     "hono": "jsr:@hono/hono@^4.6.0",
     "hono/": "jsr:@hono/hono@^4.6.0/",
-    "mssql": "npm:mssql@11.0.1",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.47.10",
     "std/": "https://deno.land/std@0.224.0/",
     "std/dotenv/load.ts": "https://deno.land/std@0.224.0/dotenv/load.ts"
   },
