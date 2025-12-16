@@ -4,8 +4,15 @@
  * Hub の public_journals データを Polimoney JSON 形式に変換する
  */
 
+import {
+  getCategoryName,
+  getElectionTypeName,
+  CATEGORIES,
+  type CategoryCode,
+} from "./constants.ts";
+
 // ============================================
-// 型定義
+// 型定義（Hub DB）
 // ============================================
 
 /** Hub の public_journals テーブルのレコード */
@@ -28,53 +35,111 @@ export interface PublicJournal {
   created_at: string;
 }
 
-/** 関連する public_ledgers の情報 */
+/** Hub の public_ledgers テーブルのレコード */
 export interface PublicLedger {
   id: string;
-  election_id: string | null;
+  politician_id: string;
   organization_id: string | null;
+  election_id: string | null;
+  fiscal_year: number;
+  total_income: number;
+  total_expense: number;
+  journal_count: number;
+  ledger_source_id: string;
+  last_updated_at: string;
+  first_synced_at: string;
+  created_at: string;
 }
 
-/** Polimoney JSON 形式のエントリ */
-export interface PolimoneyEntry {
+/** Hub の politicians テーブルのレコード */
+export interface Politician {
+  id: string;
+  name: string;
+  name_kana: string | null;
+}
+
+/** Hub の elections テーブルのレコード（JOIN済み） */
+export interface Election {
+  id: string;
+  name: string;
+  type: string;
+  election_date: string;
+  district?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+// ============================================
+// 型定義（Polimoney JSON 形式）
+// ============================================
+
+/** Polimoney JSON: 政治家情報 */
+export interface PolimoneyPolitician {
+  id: string;
+  name: string;
+  name_kana: string | null;
+}
+
+/** Polimoney JSON: 選挙情報 */
+export interface PolimoneyElection {
+  id: string;
+  name: string;
+  type: string;
+  type_name: string;
+  district_id: string | null;
+  district_name: string | null;
+  election_date: string;
+}
+
+/** Polimoney JSON: 集計サマリー */
+export interface PolimoneySummary {
+  total_income: number;
+  total_expense: number;
+  balance: number;
+  public_expense_total: number;
+  journal_count: number;
+}
+
+/** Polimoney JSON: メタ情報 */
+export interface PolimoneyMeta {
+  api_version: string;
+  politician: PolimoneyPolitician;
+  election: PolimoneyElection;
+  summary: PolimoneySummary;
+  generated_at: string;
+}
+
+/** Polimoney JSON: 仕訳エントリ */
+export interface PolimoneyJournalEntry {
   data_id: string;
   date: string | null;
-  price: number;
+  amount: number;
   category: string;
-  type: string | null;
+  category_name: string;
+  type: string;
   purpose: string | null;
   non_monetary_basis: string | null;
   note: string | null;
-  public_expense_amount?: number;
+  public_expense_amount: number | null;
 }
 
-/** Polimoney API レスポンス形式 */
+/** Polimoney JSON: API レスポンス全体 */
 export interface PolimoneyResponse {
-  data: PolimoneyEntry[];
-  meta: {
-    api_version: string;
-    total_count: number;
-    election?: {
-      id: string;
-      name: string;
-    };
-    organization?: {
-      id: string;
-      name: string;
-    };
-  };
+  meta: PolimoneyMeta;
+  data: PolimoneyJournalEntry[];
 }
 
 // ============================================
 // account_code → category マッピング
 // ============================================
 
-const ACCOUNT_CODE_TO_CATEGORY: Record<string, string> = {
+const ACCOUNT_CODE_TO_CATEGORY: Record<string, CategoryCode> = {
   // 支出（選挙運動費用）
   EXP_PERSONNEL_ELEC: "personnel",
   EXP_BUILDING_ELEC: "building",
   EXP_COMMUNICATION_ELEC: "communication",
-  EXP_TRANSPORT_ELEC: "transport",
+  EXP_TRANSPORT_ELEC: "transportation",
   EXP_PRINTING_ELEC: "printing",
   EXP_ADVERTISING_ELEC: "advertising",
   EXP_STATIONERY_ELEC: "stationery",
@@ -82,20 +147,20 @@ const ACCOUNT_CODE_TO_CATEGORY: Record<string, string> = {
   EXP_LODGING_ELEC: "lodging",
   EXP_MISC_ELEC: "miscellaneous",
 
-  // 収入（すべて income）
-  REV_SELF_FINANCING: "income",
-  REV_LOAN_ELEC: "income",
-  REV_DONATION_INDIVIDUAL_ELEC: "income",
-  REV_DONATION_POLITICAL_ELEC: "income",
-  REV_MISC_ELEC: "income",
+  // 収入
+  REV_SELF_FINANCING: "other_income",
+  REV_LOAN_ELEC: "other_income",
+  REV_DONATION_INDIVIDUAL_ELEC: "donation",
+  REV_DONATION_POLITICAL_ELEC: "donation",
+  REV_MISC_ELEC: "other_income",
 } as const;
 
 /**
  * account_code から category を導出
  */
-export function deriveCategory(accountCode: string | null): string {
+export function deriveCategory(accountCode: string | null): CategoryCode {
   if (!accountCode) {
-    return "miscellaneous"; // デフォルト
+    return "miscellaneous";
   }
 
   const category = ACCOUNT_CODE_TO_CATEGORY[accountCode];
@@ -105,7 +170,10 @@ export function deriveCategory(accountCode: string | null): string {
 
   // プレフィックスで判断
   if (accountCode.startsWith("REV_")) {
-    return "income";
+    if (accountCode.includes("DONATION")) {
+      return "donation";
+    }
+    return "other_income";
   }
   if (accountCode.startsWith("EXP_")) {
     return "miscellaneous";
@@ -114,32 +182,29 @@ export function deriveCategory(accountCode: string | null): string {
   return "miscellaneous";
 }
 
+/**
+ * category が収入かどうか
+ */
+function isIncomeCategory(category: string): boolean {
+  const cat = CATEGORIES[category as CategoryCode];
+  return cat?.type === "income";
+}
+
 // ============================================
 // type 導出ロジック
 // ============================================
 
 /**
- * type を導出（選挙台帳のみ）
- *
- * @param ledger - 関連する台帳情報
- * @param classification - 活動区分 ('campaign' | 'pre-campaign')
- * @param accountCode - 勘定科目コード
- * @param isExpense - 支出かどうか
+ * type を導出（選挙台帳用）
  */
 export function deriveType(
-  ledger: PublicLedger,
   classification: string | null,
   accountCode: string | null,
-  isExpense: boolean
-): string | null {
-  // 政治団体台帳（election_id がない）の場合は type を出力しない
-  if (!ledger.election_id) {
-    return null;
-  }
-
+  category: string
+): string {
   // 収入の場合
-  if (!isExpense) {
-    if (accountCode?.includes("DONATION")) {
+  if (isIncomeCategory(category)) {
+    if (category === "donation") {
       return "寄附";
     }
     return "その他の収入";
@@ -158,52 +223,71 @@ export function deriveType(
 }
 
 // ============================================
-// メイン変換関数
+// 変換関数
 // ============================================
 
 /**
- * Hub public_journals → Polimoney JSON 形式に変換
+ * PublicJournal → PolimoneyJournalEntry に変換
  */
-export function transformToPolimoneyFormat(
-  journal: PublicJournal,
-  ledger: PublicLedger
-): PolimoneyEntry {
+export function transformJournal(
+  journal: PublicJournal
+): PolimoneyJournalEntry {
   const category = deriveCategory(journal.account_code);
-  const isExpense = category !== "income";
-  const type = deriveType(
-    ledger,
-    journal.classification,
-    journal.account_code,
-    isExpense
-  );
+  const type = deriveType(journal.classification, journal.account_code, category);
 
-  const entry: PolimoneyEntry = {
+  return {
     data_id: journal.id,
     date: journal.date,
-    price: journal.amount,
+    amount: journal.amount,
     category,
+    category_name: getCategoryName(category),
     type,
     purpose: journal.description,
     non_monetary_basis: journal.non_monetary_basis,
     note: journal.note,
+    public_expense_amount: journal.public_expense_amount,
   };
-
-  // public_expense_amount は > 0 の場合のみ出力
-  if (journal.public_expense_amount && journal.public_expense_amount > 0) {
-    entry.public_expense_amount = journal.public_expense_amount;
-  }
-
-  return entry;
 }
 
 /**
- * 複数の journals を一括変換
+ * Election → PolimoneyElection に変換
  */
-export function transformJournalsToPolimoney(
+export function transformElection(
+  election: Election
+): PolimoneyElection {
+  return {
+    id: election.id,
+    name: election.name,
+    type: election.type,
+    type_name: getElectionTypeName(election.type),
+    district_id: election.district?.id ?? null,
+    district_name: election.district?.name ?? null,
+    election_date: election.election_date,
+  };
+}
+
+/**
+ * サマリーを計算
+ */
+export function calculateSummary(
   journals: PublicJournal[],
   ledger: PublicLedger
-): PolimoneyEntry[] {
-  return journals.map((journal) => transformToPolimoneyFormat(journal, ledger));
+): PolimoneySummary {
+  let publicExpenseTotal = 0;
+
+  for (const journal of journals) {
+    if (journal.public_expense_amount && journal.public_expense_amount > 0) {
+      publicExpenseTotal += journal.public_expense_amount;
+    }
+  }
+
+  return {
+    total_income: ledger.total_income,
+    total_expense: ledger.total_expense,
+    balance: ledger.total_income - ledger.total_expense,
+    public_expense_total: publicExpenseTotal,
+    journal_count: journals.length,
+  };
 }
 
 /**
@@ -212,21 +296,25 @@ export function transformJournalsToPolimoney(
 export function createPolimoneyResponse(
   journals: PublicJournal[],
   ledger: PublicLedger,
-  options: {
-    election?: { id: string; name: string };
-    organization?: { id: string; name: string };
-  } = {}
+  politician: Politician,
+  election: Election
 ): PolimoneyResponse {
-  const data = transformJournalsToPolimoney(journals, ledger);
+  const data = journals.map(transformJournal);
+  const summary = calculateSummary(journals, ledger);
 
   return {
-    data,
     meta: {
       api_version: "v1",
-      total_count: data.length,
-      ...(options.election && { election: options.election }),
-      ...(options.organization && { organization: options.organization }),
+      politician: {
+        id: politician.id,
+        name: politician.name,
+        name_kana: politician.name_kana,
+      },
+      election: transformElection(election),
+      summary,
+      generated_at: new Date().toISOString(),
     },
+    data,
   };
 }
 
@@ -235,26 +323,10 @@ export function createPolimoneyResponse(
 // ============================================
 
 /**
- * account_code が収入かどうかを判定
- */
-export function isIncomeAccount(accountCode: string | null): boolean {
-  if (!accountCode) return false;
-  return accountCode.startsWith("REV_");
-}
-
-/**
- * account_code が支出かどうかを判定
- */
-export function isExpenseAccount(accountCode: string | null): boolean {
-  if (!accountCode) return false;
-  return accountCode.startsWith("EXP_");
-}
-
-/**
  * 利用可能な category 一覧を取得
  */
-export function getAvailableCategories(): string[] {
-  return [...new Set(Object.values(ACCOUNT_CODE_TO_CATEGORY))];
+export function getAvailableCategories(): CategoryCode[] {
+  return Object.keys(CATEGORIES) as CategoryCode[];
 }
 
 /**
