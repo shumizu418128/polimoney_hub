@@ -69,6 +69,70 @@ CREATE TABLE IF NOT EXISTS master_metadata (
 );
 
 -- ============================================
+-- 勘定科目マスタ（政治資金規正法準拠）
+-- ============================================
+
+-- 勘定科目マスタ
+CREATE TABLE IF NOT EXISTS account_codes (
+    code VARCHAR(50) PRIMARY KEY,                      -- 'EXP_PERSONNEL', 'REV_DONATION_INDIVIDUAL'
+    name VARCHAR(100) NOT NULL,                        -- '人件費', '個人からの寄附'
+    name_kana VARCHAR(100),                            -- 読み仮名
+    type VARCHAR(20) NOT NULL,                         -- 'asset', 'liability', 'equity', 'revenue', 'expense', 'subsidy'
+    report_category VARCHAR(50) NOT NULL,              -- '経常経費', '政治活動費', '選挙運動費用'
+    ledger_type VARCHAR(20) NOT NULL DEFAULT 'both',   -- 'both', 'organization', 'election'
+    is_public_subsidy_eligible BOOLEAN DEFAULT FALSE,  -- 公費負担対象か
+    display_order INT NOT NULL,                        -- 表示順
+    polimoney_category VARCHAR(50),                    -- Polimoney での表示カテゴリ
+    parent_code VARCHAR(50) REFERENCES account_codes(code),  -- 親科目（階層構造用）
+    description TEXT,                                  -- 説明
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_account_codes_type ON account_codes(type);
+CREATE INDEX IF NOT EXISTS idx_account_codes_ledger ON account_codes(ledger_type);
+CREATE INDEX IF NOT EXISTS idx_account_codes_order ON account_codes(display_order);
+CREATE INDEX IF NOT EXISTS idx_account_codes_active ON account_codes(is_active);
+
+-- ============================================
+-- 選挙公営費目マスタ（選挙の種類ごとの公費負担上限）
+-- ============================================
+
+-- 選挙タイプマスタ
+CREATE TABLE IF NOT EXISTS election_types (
+    code VARCHAR(10) PRIMARY KEY,          -- 'HR', 'HC', 'PG', 'CM', 'GM'
+    name VARCHAR(50) NOT NULL,             -- '衆議院選挙', '参議院選挙'
+    description TEXT,
+    display_order INT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 選挙公営費目マスタ（公費負担の費目と上限額）
+CREATE TABLE IF NOT EXISTS public_subsidy_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    election_type_code VARCHAR(10) NOT NULL REFERENCES election_types(code),
+    account_code VARCHAR(50) NOT NULL REFERENCES account_codes(code),
+    item_name VARCHAR(100) NOT NULL,       -- '選挙運動用ポスター', '選挙運動用ビラ'
+    unit VARCHAR(20),                      -- '枚', '台', '日'
+    unit_price_limit INT,                  -- 単価上限（円）
+    quantity_formula TEXT,                 -- 数量計算式（例: '有権者数 / 1000'）
+    max_quantity INT,                      -- 最大数量
+    total_limit INT,                       -- 総額上限（円）
+    notes TEXT,                            -- 備考（法令根拠等）
+    effective_from DATE,                   -- 適用開始日
+    effective_until DATE,                  -- 適用終了日（NULL = 現在有効）
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_subsidy_items_election ON public_subsidy_items(election_type_code);
+CREATE INDEX IF NOT EXISTS idx_subsidy_items_account ON public_subsidy_items(account_code);
+CREATE INDEX IF NOT EXISTS idx_subsidy_items_active ON public_subsidy_items(is_active);
+
+-- ============================================
 -- インデックス（基本マスタ）
 -- ============================================
 
@@ -209,7 +273,10 @@ VALUES
     ('districts', NOW()),
     ('elections', NOW()),
     ('politicians', NOW()),
-    ('organizations', NOW())
+    ('organizations', NOW()),
+    ('account_codes', NOW()),
+    ('election_types', NOW()),
+    ('public_subsidy_items', NOW())
 ON CONFLICT (table_name) DO NOTHING;
 
 -- ============================================
@@ -267,6 +334,9 @@ ALTER TABLE politicians ENABLE ROW LEVEL SECURITY;
 ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE elections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master_metadata ENABLE ROW LEVEL SECURITY;
+ALTER TABLE account_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE election_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public_subsidy_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public_ledgers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public_journals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ledger_change_logs ENABLE ROW LEVEL SECURITY;
@@ -282,6 +352,9 @@ CREATE POLICY "Allow public read" ON politicians FOR SELECT USING (true);
 CREATE POLICY "Allow public read" ON organizations FOR SELECT USING (true);
 CREATE POLICY "Allow public read" ON elections FOR SELECT USING (true);
 CREATE POLICY "Allow public read" ON master_metadata FOR SELECT USING (true);
+CREATE POLICY "Allow public read" ON account_codes FOR SELECT USING (true);
+CREATE POLICY "Allow public read" ON election_types FOR SELECT USING (true);
+CREATE POLICY "Allow public read" ON public_subsidy_items FOR SELECT USING (true);
 CREATE POLICY "Allow public read" ON public_ledgers FOR SELECT USING (true);
 CREATE POLICY "Allow public read" ON public_journals FOR SELECT USING (true);
 CREATE POLICY "Allow public read" ON ledger_change_logs FOR SELECT USING (true);
@@ -299,6 +372,9 @@ CREATE POLICY "Allow service write" ON politicians FOR ALL USING (auth.role() = 
 CREATE POLICY "Allow service write" ON organizations FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Allow service write" ON elections FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Allow service write" ON master_metadata FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Allow service write" ON account_codes FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Allow service write" ON election_types FOR ALL USING (auth.role() = 'service_role');
+CREATE POLICY "Allow service write" ON public_subsidy_items FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Allow service write" ON public_ledgers FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Allow service write" ON public_journals FOR ALL USING (auth.role() = 'service_role');
 CREATE POLICY "Allow service write" ON ledger_change_logs FOR ALL USING (auth.role() = 'service_role');
