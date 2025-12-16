@@ -571,3 +571,169 @@ adminRouter.post("/users/:id/reset-password", async (c) => {
   return c.json({ message: `パスワードリセットメールを ${adminUser.email} に送信しました` });
 });
 
+// ============================================
+// ロック解除リクエスト管理（管理者用）
+// ============================================
+
+interface UnlockRequest {
+  id: string;
+  ledger_id: string;
+  ledger_type: string;
+  fiscal_year: number | null;
+  requested_by_user_id: string;
+  requested_by_email: string;
+  reason: string;
+  status: string;
+  approved_at: string | null;
+  approved_by: string | null;
+  unlock_expires_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ロック解除リクエスト一覧（管理者用）
+adminRouter.get("/unlock-requests", async (c) => {
+  const status = c.req.query("status");
+  const supabase = getServiceClient();
+
+  let query = supabase.from("unlock_requests").select("*");
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to fetch unlock requests:", error);
+    return c.json({ error: "Failed to fetch unlock requests" }, 500);
+  }
+
+  return c.json({ data });
+});
+
+// ロック解除リクエスト詳細
+adminRouter.get("/unlock-requests/:id", async (c) => {
+  const id = c.req.param("id");
+  const supabase = getServiceClient();
+
+  const { data, error } = await supabase
+    .from("unlock_requests")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
+    return c.json({ error: "Unlock request not found" }, 404);
+  }
+
+  return c.json({ data });
+});
+
+// ロック解除リクエスト承認
+adminRouter.put("/unlock-requests/:id/approve", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json<{
+    approved_by?: string;
+    unlock_days?: number; // デフォルト 7 日
+  }>();
+
+  const supabase = getServiceClient();
+
+  // リクエストを取得
+  const { data: request, error: fetchError } = await supabase
+    .from("unlock_requests")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !request) {
+    return c.json({ error: "Unlock request not found" }, 404);
+  }
+
+  if (request.status !== "pending") {
+    return c.json({ error: "Request is already processed" }, 400);
+  }
+
+  const now = new Date();
+  const unlockDays = body.unlock_days || 7;
+  const expiresAt = new Date(now.getTime() + unlockDays * 24 * 60 * 60 * 1000);
+
+  // リクエストを承認
+  const { data, error } = await supabase
+    .from("unlock_requests")
+    .update({
+      status: "approved",
+      approved_at: now.toISOString(),
+      approved_by: body.approved_by || null,
+      unlock_expires_at: expiresAt.toISOString(),
+      updated_at: now.toISOString(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Failed to approve unlock request:", error);
+    return c.json({ error: "Failed to approve unlock request" }, 500);
+  }
+
+  console.log(`[Admin] Unlock request approved: ${id}, expires at ${expiresAt.toISOString()}`);
+
+  return c.json({
+    data,
+    message: `ロック解除を承認しました。${unlockDays}日間有効です。`,
+  });
+});
+
+// ロック解除リクエスト却下
+adminRouter.put("/unlock-requests/:id/reject", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json<{
+    rejection_reason: string;
+    rejected_by?: string;
+  }>();
+
+  if (!body.rejection_reason) {
+    return c.json({ error: "rejection_reason is required" }, 400);
+  }
+
+  const supabase = getServiceClient();
+
+  // リクエストを取得
+  const { data: request, error: fetchError } = await supabase
+    .from("unlock_requests")
+    .select("status")
+    .eq("id", id)
+    .single();
+
+  if (fetchError || !request) {
+    return c.json({ error: "Unlock request not found" }, 404);
+  }
+
+  if (request.status !== "pending") {
+    return c.json({ error: "Request is already processed" }, 400);
+  }
+
+  const { data, error } = await supabase
+    .from("unlock_requests")
+    .update({
+      status: "rejected",
+      rejection_reason: body.rejection_reason,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Failed to reject unlock request:", error);
+    return c.json({ error: "Failed to reject unlock request" }, 500);
+  }
+
+  console.log(`[Admin] Unlock request rejected: ${id}`);
+
+  return c.json({ data });
+});
+
