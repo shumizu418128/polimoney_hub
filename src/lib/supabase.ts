@@ -1,18 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = Deno.env.get("SUPABASE_URL");
-const supabaseSecretKey = Deno.env.get("SUPABASE_SECRET_KEY");
-const supabasePublishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
-
-if (!supabaseUrl) {
-  console.warn("Warning: SUPABASE_URL is not set");
-}
-
 /**
  * Service Role クライアント（サーバーサイド用、全権限）
  * RLS をバイパスするので注意して使用
  */
 export function getServiceClient() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseSecretKey = Deno.env.get("SUPABASE_SECRET_KEY");
+
   if (!supabaseUrl || !supabaseSecretKey) {
     throw new Error("SUPABASE_URL or SUPABASE_SECRET_KEY is not set");
   }
@@ -28,6 +23,9 @@ export function getServiceClient() {
  * Anon クライアント（クライアントサイド用、RLS 適用）
  */
 export function getPublicClient() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabasePublishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+
   if (!supabaseUrl || !supabasePublishableKey) {
     throw new Error("SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY is not set");
   }
@@ -38,6 +36,9 @@ export function getPublicClient() {
  * JWT からユーザー情報を取得
  */
 export async function getUserFromToken(accessToken: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseSecretKey = Deno.env.get("SUPABASE_SECRET_KEY");
+
   if (!supabaseUrl || !supabaseSecretKey) {
     throw new Error("SUPABASE_URL or SUPABASE_SECRET_KEY is not set");
   }

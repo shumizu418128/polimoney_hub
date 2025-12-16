@@ -9,7 +9,7 @@
  */
 
 import { Hono } from "hono";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getServiceClient } from "../lib/supabase.ts";
 import {
   createPolimoneyResponse,
   type PublicJournal,
@@ -17,11 +17,6 @@ import {
   type Politician,
   type Election,
 } from "../lib/polimoney-transform.ts";
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
-const SUPABASE_KEY = Deno.env.get("SUPABASE_SECRET_KEY") || "";
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export const polimoneyRouter = new Hono();
 
@@ -39,6 +34,8 @@ polimoneyRouter.get("/elections/:electionId/journals", async (c) => {
   const politicianId = c.req.query("politician_id");
 
   try {
+    const supabase = getServiceClient();
+
     // 1. 選挙情報を取得（district を JOIN）
     const { data: election, error: electionError } = await supabase
       .from("elections")
@@ -137,6 +134,8 @@ polimoneyRouter.get("/ledgers/:ledgerId/journals", async (c) => {
   const { ledgerId } = c.req.param();
 
   try {
+    const supabase = getServiceClient();
+
     // 1. 台帳情報を取得
     const { data: ledger, error: ledgerError } = await supabase
       .from("public_ledgers")
@@ -217,6 +216,8 @@ polimoneyRouter.get("/ledgers/:ledgerId/journals", async (c) => {
  */
 polimoneyRouter.get("/elections", async (c) => {
   try {
+    const supabase = getServiceClient();
+
     // public_ledgers に紐づく選挙のみ取得
     const { data: ledgers, error: ledgerError } = await supabase
       .from("public_ledgers")
@@ -279,6 +280,8 @@ polimoneyRouter.get("/elections/:electionId/candidates", async (c) => {
   const { electionId } = c.req.param();
 
   try {
+    const supabase = getServiceClient();
+
     // 該当選挙の台帳を取得
     const { data: ledgers, error: ledgerError } = await supabase
       .from("public_ledgers")

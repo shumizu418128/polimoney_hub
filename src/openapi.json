@@ -89,7 +89,9 @@
                     "api_version": { "type": "string", "example": "v1" },
                     "data": {
                       "type": "array",
-                      "items": { "$ref": "#/components/schemas/ElectionSummary" }
+                      "items": {
+                        "$ref": "#/components/schemas/ElectionSummary"
+                      }
                     },
                     "total_count": { "type": "integer", "example": 5 }
                   }
@@ -185,7 +187,9 @@
                     "election_id": { "type": "string" },
                     "data": {
                       "type": "array",
-                      "items": { "$ref": "#/components/schemas/CandidateSummary" }
+                      "items": {
+                        "$ref": "#/components/schemas/CandidateSummary"
+                      }
                     },
                     "total_count": { "type": "integer" }
                   }
@@ -356,19 +360,38 @@
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "name": { "type": "string", "example": "テスト太郎" },
-          "name_kana": { "type": "string", "example": "テストタロウ", "nullable": true }
+          "name_kana": {
+            "type": "string",
+            "example": "テストタロウ",
+            "nullable": true
+          }
         }
       },
       "Election": {
         "type": "object",
         "properties": {
           "id": { "type": "string", "format": "uuid" },
-          "name": { "type": "string", "example": "2024年 第50回衆議院議員総選挙" },
+          "name": {
+            "type": "string",
+            "example": "2024年 第50回衆議院議員総選挙"
+          },
           "type": { "type": "string", "example": "HR" },
           "type_name": { "type": "string", "example": "衆議院議員選挙" },
-          "district_id": { "type": "string", "format": "uuid", "nullable": true },
-          "district_name": { "type": "string", "example": "東京都第1区", "nullable": true },
-          "election_date": { "type": "string", "format": "date", "example": "2024-10-27" }
+          "district_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "district_name": {
+            "type": "string",
+            "example": "東京都第1区",
+            "nullable": true
+          },
+          "election_date": {
+            "type": "string",
+            "format": "date",
+            "example": "2024-10-27"
+          }
         }
       },
       "Summary": {
@@ -390,7 +413,11 @@
           "category": { "type": "string", "example": "personnel" },
           "category_name": { "type": "string", "example": "人件費" },
           "type": { "type": "string", "example": "選挙運動" },
-          "purpose": { "type": "string", "nullable": true, "example": "車上運動員報酬" },
+          "purpose": {
+            "type": "string",
+            "nullable": true,
+            "example": "車上運動員報酬"
+          },
           "non_monetary_basis": { "type": "string", "nullable": true },
           "note": { "type": "string", "nullable": true },
           "public_expense_amount": { "type": "integer", "nullable": true }
