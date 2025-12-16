@@ -1,8 +1,8 @@
 {
   "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
   "tasks": {
-    "dev": "deno run --allow-net --allow-env --allow-read --watch api/index.ts",
-    "start": "deno run --allow-net --allow-env --allow-read api/index.ts",
+    "dev": "deno run --allow-net --allow-env --allow-read --watch src/index.ts",
+    "start": "deno run --allow-net --allow-env --allow-read src/index.ts",
     "test": "deno test --allow-net --allow-env --allow-read",
     "test:db": "deno run --allow-net --allow-env --allow-read db/test-connection.ts",
     "seed": "deno run --allow-net --allow-env --allow-read db/seed-supabase.ts",

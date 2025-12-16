@@ -10,6 +10,8 @@ try {
 import { Hono } from "hono";
 import { cors } from "jsr:@hono/hono@^4.6.0/cors";
 import { logger } from "jsr:@hono/hono@^4.6.0/logger";
+import { serveStatic } from "jsr:@hono/hono@^4.6.0/deno";
+import openApiSpec from "./openapi.json" with { type: "json" };
 import { apiKeyAuth } from "./middleware/auth.ts";
 import { adminAuth } from "./middleware/admin-auth.ts";
 import { politiciansRouter } from "./routes/politicians.ts";
@@ -41,6 +43,29 @@ app.get("/", (c) => {
 
 app.get("/health", (c) => {
   return c.json({ status: "healthy" });
+});
+
+// OpenAPI Spec (JSON)
+app.get("/openapi.json", (c) => {
+  return c.json(openApiSpec);
+});
+
+// API ドキュメント (Scalar UI)
+app.get("/docs", (c) => {
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Polimoney Hub API - Documentation</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+</head>
+<body>
+  <script id="api-reference" data-url="/openapi.json"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+</body>
+</html>`;
+  return c.html(html);
 });
 
 // API routes (認証必要)

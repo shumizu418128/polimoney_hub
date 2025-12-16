@@ -1,0 +1,439 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Polimoney Hub API",
+    "version": "1.0.0",
+    "description": "政治資金の透明化を推進する Polimoney プラットフォームの Hub API\n\n## 認証\n\n### API キー認証（公開 API）\n`X-API-Key` ヘッダーに API キーを設定してください。\n\n### Bearer トークン認証（管理者 API）\n`Authorization: Bearer <token>` ヘッダーに Supabase Auth のアクセストークンを設定してください。",
+    "contact": {
+      "name": "Polimoney Team",
+      "url": "https://github.com/moai-redcap/polimoney_hub"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "ローカル開発環境"
+    },
+    {
+      "url": "https://polimoney-hub.deno.dev",
+      "description": "本番環境"
+    }
+  ],
+  "tags": [
+    { "name": "Health", "description": "ヘルスチェック" },
+    { "name": "Polimoney", "description": "Polimoney 向け収支データ API" },
+    { "name": "Master", "description": "マスタデータ API" },
+    { "name": "Sync", "description": "Ledger 同期 API" },
+    { "name": "Admin", "description": "管理者 API" }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "API 情報",
+        "description": "API のバージョン情報とステータスを返します",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string", "example": "Polimoney Hub" },
+                    "version": { "type": "string", "example": "0.1.0" },
+                    "status": { "type": "string", "example": "ok" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "ヘルスチェック",
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "healthy" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/polimoney/elections": {
+      "get": {
+        "tags": ["Polimoney"],
+        "summary": "公開選挙一覧",
+        "description": "収支データが公開されている選挙の一覧を取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "api_version": { "type": "string", "example": "v1" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/ElectionSummary" }
+                    },
+                    "total_count": { "type": "integer", "example": 5 }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/polimoney/elections/{electionId}/journals": {
+      "get": {
+        "tags": ["Polimoney"],
+        "summary": "選挙収支データ取得",
+        "description": "指定した選挙の収支データを Polimoney JSON 形式で取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "electionId",
+            "in": "path",
+            "required": true,
+            "description": "選挙 ID (UUID)",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "politician_id",
+            "in": "query",
+            "required": false,
+            "description": "政治家 ID（同じ選挙に複数候補者がいる場合は必須）",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PolimoneyResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "複数候補者が存在し politician_id が未指定",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string" },
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "politician_id": { "type": "string" },
+                          "ledger_id": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "選挙または台帳が見つからない" }
+        }
+      }
+    },
+    "/api/v1/polimoney/elections/{electionId}/candidates": {
+      "get": {
+        "tags": ["Polimoney"],
+        "summary": "選挙の候補者一覧",
+        "description": "指定した選挙に出馬した候補者（収支データ公開済み）の一覧を取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "electionId",
+            "in": "path",
+            "required": true,
+            "description": "選挙 ID (UUID)",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "api_version": { "type": "string" },
+                    "election_id": { "type": "string" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/CandidateSummary" }
+                    },
+                    "total_count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "選挙が見つからない" }
+        }
+      }
+    },
+    "/api/v1/polimoney/ledgers/{ledgerId}/journals": {
+      "get": {
+        "tags": ["Polimoney"],
+        "summary": "台帳 ID 指定でデータ取得",
+        "description": "台帳 ID を直接指定して収支データを取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "ledgerId",
+            "in": "path",
+            "required": true,
+            "description": "台帳 ID (UUID)",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PolimoneyResponse" }
+              }
+            }
+          },
+          "400": { "description": "選挙台帳以外は非対応" },
+          "404": { "description": "台帳が見つからない" }
+        }
+      }
+    },
+    "/api/v1/master/account-codes": {
+      "get": {
+        "tags": ["Master"],
+        "summary": "勘定科目一覧",
+        "description": "政治資金規正法に準拠した勘定科目マスタを取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/AccountCode" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/master/election-types": {
+      "get": {
+        "tags": ["Master"],
+        "summary": "選挙タイプ一覧",
+        "description": "選挙タイプ（HR: 衆院選, HC: 参院選 等）のマスタを取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/ElectionType" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/master/municipalities": {
+      "get": {
+        "tags": ["Master"],
+        "summary": "市区町村一覧",
+        "description": "全国の市区町村マスタ（約 1,794 件）を取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "prefecture",
+            "in": "query",
+            "required": false,
+            "description": "都道府県名でフィルタ",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        }
+      }
+    },
+    "/api/v1/master/prefectures": {
+      "get": {
+        "tags": ["Master"],
+        "summary": "都道府県一覧",
+        "description": "47 都道府県のマスタを取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API キー（開発用: dev_xxx, 本番用: prod_xxx）"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Supabase Auth アクセストークン"
+      }
+    },
+    "schemas": {
+      "PolimoneyResponse": {
+        "type": "object",
+        "description": "Polimoney JSON レスポンス",
+        "properties": {
+          "meta": { "$ref": "#/components/schemas/PolimoneyMeta" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/JournalEntry" }
+          }
+        }
+      },
+      "PolimoneyMeta": {
+        "type": "object",
+        "properties": {
+          "api_version": { "type": "string", "example": "v1" },
+          "politician": { "$ref": "#/components/schemas/Politician" },
+          "election": { "$ref": "#/components/schemas/Election" },
+          "summary": { "$ref": "#/components/schemas/Summary" },
+          "generated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Politician": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "example": "テスト太郎" },
+          "name_kana": { "type": "string", "example": "テストタロウ", "nullable": true }
+        }
+      },
+      "Election": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "example": "2024年 第50回衆議院議員総選挙" },
+          "type": { "type": "string", "example": "HR" },
+          "type_name": { "type": "string", "example": "衆議院議員選挙" },
+          "district_id": { "type": "string", "format": "uuid", "nullable": true },
+          "district_name": { "type": "string", "example": "東京都第1区", "nullable": true },
+          "election_date": { "type": "string", "format": "date", "example": "2024-10-27" }
+        }
+      },
+      "Summary": {
+        "type": "object",
+        "properties": {
+          "total_income": { "type": "integer", "example": 2500000 },
+          "total_expense": { "type": "integer", "example": 2321859 },
+          "balance": { "type": "integer", "example": 178141 },
+          "public_expense_total": { "type": "integer", "example": 1135856 },
+          "journal_count": { "type": "integer", "example": 37 }
+        }
+      },
+      "JournalEntry": {
+        "type": "object",
+        "properties": {
+          "data_id": { "type": "string", "format": "uuid" },
+          "date": { "type": "string", "format": "date", "nullable": true },
+          "amount": { "type": "integer", "example": 30605 },
+          "category": { "type": "string", "example": "personnel" },
+          "category_name": { "type": "string", "example": "人件費" },
+          "type": { "type": "string", "example": "選挙運動" },
+          "purpose": { "type": "string", "nullable": true, "example": "車上運動員報酬" },
+          "non_monetary_basis": { "type": "string", "nullable": true },
+          "note": { "type": "string", "nullable": true },
+          "public_expense_amount": { "type": "integer", "nullable": true }
+        }
+      },
+      "ElectionSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "type": { "type": "string" },
+          "election_date": { "type": "string", "format": "date" },
+          "district_id": { "type": "string", "nullable": true },
+          "district_name": { "type": "string", "nullable": true }
+        }
+      },
+      "CandidateSummary": {
+        "type": "object",
+        "properties": {
+          "ledger_id": { "type": "string", "format": "uuid" },
+          "politician": { "$ref": "#/components/schemas/Politician" },
+          "summary": { "$ref": "#/components/schemas/Summary" }
+        }
+      },
+      "AccountCode": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "example": "EXP_PERSONNEL_ELEC" },
+          "name": { "type": "string", "example": "人件費" },
+          "type": { "type": "string", "example": "expense" },
+          "report_category": { "type": "string", "example": "選挙運動費用" },
+          "ledger_type": { "type": "string", "example": "election" },
+          "polimoney_category": { "type": "string", "example": "personnel" }
+        }
+      },
+      "ElectionType": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "example": "HR" },
+          "name": { "type": "string", "example": "衆議院議員選挙" },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  }
+}
