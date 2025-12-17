@@ -25,6 +25,7 @@ import { unlockRequestsRouter } from "./routes/unlock-requests.ts";
 import { masterRouter } from "./routes/master.ts";
 import { authRouter } from "./routes/auth.ts";
 import { polimoneyRouter } from "./routes/polimoney.ts";
+import registrationRequestsRouter from "./routes/registration-requests.ts";
 
 const app = new Hono();
 
@@ -51,11 +52,11 @@ app.get("/openapi.json", (c) => {
 });
 
 // API ドキュメント (Scalar UI)
-app.get("/docs", (c) => {
+app.get("/api-reference", (c) => {
   const html = `<!DOCTYPE html>
 <html>
 <head>
-  <title>Polimoney Hub API - Documentation</title>
+  <title>Polimoney Hub API - Reference</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
@@ -81,6 +82,7 @@ api.route("/sync", syncRouter);
 api.route("/unlock-requests", unlockRequestsRouter);
 api.route("/master", masterRouter);
 api.route("/polimoney", polimoneyRouter);
+api.route("/registration-requests", registrationRequestsRouter);
 
 // Admin routes (管理者認証必要) - /api/v1 の前にマウント
 const admin = new Hono();
@@ -110,7 +112,7 @@ app.onError((err, c) => {
   return c.json({ error: "Internal Server Error" }, 500);
 });
 
-const port = parseInt(Deno.env.get("PORT") || "8000");
+const port = parseInt(Deno.env.get("PORT") || "3722");
 console.log(`🚀 Polimoney Hub is running on http://localhost:${port}`);
 
 Deno.serve({ port }, app.fetch);

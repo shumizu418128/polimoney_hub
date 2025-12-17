@@ -11,11 +11,11 @@
   },
   "servers": [
     {
-      "url": "http://localhost:8000",
+      "url": "http://localhost:3722",
       "description": "ローカル開発環境"
     },
     {
-      "url": "https://polimoney-hub.deno.dev",
+      "url": "https://polimoney-hub.dd2030-topics.deno.net",
       "description": "本番環境"
     }
   ],
@@ -23,8 +23,9 @@
     { "name": "Health", "description": "ヘルスチェック" },
     { "name": "Polimoney", "description": "Polimoney 向け収支データ API" },
     { "name": "Master", "description": "マスタデータ API" },
-    { "name": "Sync", "description": "Ledger 同期 API" },
-    { "name": "Admin", "description": "管理者 API" }
+    { "name": "Sync", "description": "Ledger → Hub 同期 API" },
+    { "name": "Unlock", "description": "ロック解除リクエスト API" },
+    { "name": "Admin", "description": "管理者 API（Bearer トークン認証）" }
   ],
   "paths": {
     "/": {
@@ -316,6 +317,820 @@
           }
         }
       }
+    },
+    "/api/v1/master/public-subsidy-items": {
+      "get": {
+        "tags": ["Master"],
+        "summary": "選挙公営費目一覧",
+        "description": "選挙運動の公費負担対象となる費目マスタを取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PublicSubsidyItem"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/master/metadata": {
+      "get": {
+        "tags": ["Master"],
+        "summary": "マスタ更新日時",
+        "description": "各マスタデータの最終更新日時を取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "account_codes": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "election_types": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "municipalities": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync/journals": {
+      "post": {
+        "tags": ["Sync"],
+        "summary": "仕訳データ同期",
+        "description": "Ledger から仕訳データを受け取り public_journals に保存します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "journals": {
+                    "type": "array",
+                    "items": { "$ref": "#/components/schemas/SyncJournalInput" }
+                  }
+                },
+                "required": ["journals"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/SyncResult" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "バリデーションエラー" }
+        }
+      }
+    },
+    "/api/v1/sync/ledger": {
+      "post": {
+        "tags": ["Sync"],
+        "summary": "台帳データ同期",
+        "description": "Ledger から台帳データを受け取り public_ledgers を作成/更新します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ledger": { "$ref": "#/components/schemas/SyncLedgerInput" }
+                },
+                "required": ["ledger"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "object" },
+                    "action": { "type": "string", "enum": ["updated"] }
+                  }
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "作成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "object" },
+                    "action": { "type": "string", "enum": ["created"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync/journals/{journal_source_id}": {
+      "delete": {
+        "tags": ["Sync"],
+        "summary": "仕訳削除",
+        "description": "Ledger 側で削除された仕訳を Hub からも削除します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "journal_source_id",
+            "in": "path",
+            "required": true,
+            "description": "Ledger 側の仕訳 ID",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "削除成功" }
+        }
+      }
+    },
+    "/api/v1/sync/journals/batch-delete": {
+      "post": {
+        "tags": ["Sync"],
+        "summary": "仕訳一括削除",
+        "description": "複数の仕訳を一括で削除します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "journal_source_ids": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "uuid" }
+                  }
+                },
+                "required": ["journal_source_ids"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "deleted": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync/status": {
+      "get": {
+        "tags": ["Sync"],
+        "summary": "同期ステータス確認",
+        "description": "同期 API のヘルスチェックと統計情報を取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ready" },
+                    "message": { "type": "string" },
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "public_ledgers": { "type": "integer" },
+                        "public_journals": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sync/change-log": {
+      "post": {
+        "tags": ["Sync"],
+        "summary": "変更ログ記録",
+        "description": "台帳の変更履歴を記録します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ledger_source_id": { "type": "string", "format": "uuid" },
+                  "change_summary": { "type": "string" },
+                  "change_details": { "type": "object" }
+                },
+                "required": ["ledger_source_id", "change_summary"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "作成成功" },
+          "404": { "description": "台帳が見つからない" }
+        }
+      }
+    },
+    "/api/v1/unlock-requests": {
+      "post": {
+        "tags": ["Unlock"],
+        "summary": "ロック解除リクエスト作成",
+        "description": "年度締め済み台帳のロック解除をリクエストします",
+        "security": [{ "ApiKeyAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateUnlockRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/UnlockRequest" }
+                  }
+                }
+              }
+            }
+          },
+          "409": { "description": "既存の pending リクエストあり" }
+        }
+      },
+      "get": {
+        "tags": ["Unlock"],
+        "summary": "ロック解除リクエスト一覧",
+        "description": "ロック解除リクエストの一覧を取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "ステータスでフィルタ",
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "approved", "rejected"]
+            }
+          },
+          {
+            "name": "ledger_id",
+            "in": "query",
+            "description": "台帳 ID でフィルタ",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/UnlockRequest" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/unlock-requests/{id}": {
+      "get": {
+        "tags": ["Unlock"],
+        "summary": "ロック解除リクエスト詳細",
+        "description": "ロック解除リクエストの詳細を取得します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/UnlockRequest" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "見つからない" }
+        }
+      }
+    },
+    "/api/v1/unlock-requests/check/{ledger_id}": {
+      "get": {
+        "tags": ["Unlock"],
+        "summary": "解除状態確認",
+        "description": "特定の台帳のロック解除状態を確認します",
+        "security": [{ "ApiKeyAuth": [] }],
+        "parameters": [
+          {
+            "name": "ledger_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "is_unlocked": { "type": "boolean" },
+                    "unlock_request": {
+                      "$ref": "#/components/schemas/UnlockRequest"
+                    },
+                    "expires_at": { "type": "string", "format": "date-time" },
+                    "pending_request": { "type": "object", "nullable": true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/election-requests": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "選挙リクエスト一覧",
+        "description": "選挙登録リクエストの一覧を取得します",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "approved", "rejected", "needs_info"]
+            }
+          }
+        ],
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+    "/api/admin/election-requests/{id}/approve": {
+      "put": {
+        "tags": ["Admin"],
+        "summary": "選挙リクエスト承認",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "area_code": {
+                    "type": "string",
+                    "description": "正式な選挙区コード"
+                  },
+                  "reviewed_by": { "type": "string" }
+                },
+                "required": ["area_code"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "承認成功" },
+          "409": { "description": "選挙 ID が既に存在" }
+        }
+      }
+    },
+    "/api/admin/election-requests/{id}/reject": {
+      "put": {
+        "tags": ["Admin"],
+        "summary": "選挙リクエスト却下",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rejection_reason": { "type": "string" },
+                  "reviewed_by": { "type": "string" }
+                },
+                "required": ["rejection_reason"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "却下成功" }
+        }
+      }
+    },
+    "/api/admin/organization-requests": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "団体リクエスト一覧",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+    "/api/admin/organization-requests/{id}/approve": {
+      "put": {
+        "tags": ["Admin"],
+        "summary": "団体リクエスト承認",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "politician_id": {
+                    "type": "string",
+                    "description": "紐づける政治家 ID"
+                  },
+                  "reviewed_by": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "承認成功" }
+        }
+      }
+    },
+    "/api/admin/organization-requests/{id}/reject": {
+      "put": {
+        "tags": ["Admin"],
+        "summary": "団体リクエスト却下",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rejection_reason": { "type": "string" },
+                  "reviewed_by": { "type": "string" }
+                },
+                "required": ["rejection_reason"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "却下成功" }
+        }
+      }
+    },
+    "/api/admin/unlock-requests": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "ロック解除リクエスト一覧（管理者）",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "成功" }
+        }
+      }
+    },
+    "/api/admin/unlock-requests/{id}/approve": {
+      "put": {
+        "tags": ["Admin"],
+        "summary": "ロック解除承認",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "approved_by": { "type": "string" },
+                  "unlock_days": {
+                    "type": "integer",
+                    "default": 7,
+                    "description": "解除有効日数"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "承認成功" }
+        }
+      }
+    },
+    "/api/admin/unlock-requests/{id}/reject": {
+      "put": {
+        "tags": ["Admin"],
+        "summary": "ロック解除却下",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rejection_reason": { "type": "string" },
+                  "rejected_by": { "type": "string" }
+                },
+                "required": ["rejection_reason"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "却下成功" }
+        }
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "管理者一覧",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/AdminUser" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Admin"],
+        "summary": "管理者招待",
+        "description": "Magic Link で新しい管理者を招待します",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "name": { "type": "string" },
+                  "role": {
+                    "type": "string",
+                    "enum": ["admin", "super_admin"],
+                    "default": "admin"
+                  }
+                },
+                "required": ["email"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "招待成功" },
+          "409": { "description": "メールアドレスが既に登録済み" }
+        }
+      }
+    },
+    "/api/admin/users/{id}": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "管理者詳細",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "成功" },
+          "404": { "description": "見つからない" }
+        }
+      },
+      "put": {
+        "tags": ["Admin"],
+        "summary": "管理者情報更新",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "role": {
+                    "type": "string",
+                    "enum": ["admin", "super_admin"]
+                  },
+                  "is_active": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "更新成功" }
+        }
+      },
+      "delete": {
+        "tags": ["Admin"],
+        "summary": "管理者削除（論理削除）",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "削除成功" }
+        }
+      }
+    },
+    "/api/admin/users/{id}/reset-password": {
+      "post": {
+        "tags": ["Admin"],
+        "summary": "パスワードリセットメール送信",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "送信成功" },
+          "404": { "description": "管理者が見つからない" }
+        }
+      }
     }
   },
   "components": {
@@ -459,6 +1274,181 @@
           "code": { "type": "string", "example": "HR" },
           "name": { "type": "string", "example": "衆議院議員選挙" },
           "description": { "type": "string" }
+        }
+      },
+      "PublicSubsidyItem": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "example": "POSTER" },
+          "name": { "type": "string", "example": "選挙運動用ポスター" },
+          "description": { "type": "string" }
+        }
+      },
+      "SyncJournalInput": {
+        "type": "object",
+        "description": "Ledger から送信される同期データ",
+        "properties": {
+          "journal_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ledger 側の仕訳 ID"
+          },
+          "ledger_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ledger 側の台帳 ID"
+          },
+          "date": { "type": "string", "format": "date", "nullable": true },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "摘要"
+          },
+          "amount": { "type": "integer" },
+          "contact_name": {
+            "type": "string",
+            "nullable": true,
+            "description": "関係者名（匿名化済み）"
+          },
+          "contact_type": { "type": "string", "nullable": true },
+          "account_code": { "type": "string", "description": "勘定科目コード" },
+          "classification": {
+            "type": "string",
+            "nullable": true,
+            "enum": ["campaign", "pre-campaign"]
+          },
+          "non_monetary_basis": { "type": "string", "nullable": true },
+          "note": { "type": "string", "nullable": true },
+          "public_expense_amount": { "type": "integer", "nullable": true },
+          "content_hash": {
+            "type": "string",
+            "description": "重複検知用ハッシュ"
+          }
+        },
+        "required": [
+          "journal_source_id",
+          "ledger_source_id",
+          "amount",
+          "account_code",
+          "content_hash"
+        ]
+      },
+      "SyncLedgerInput": {
+        "type": "object",
+        "description": "Ledger から送信される台帳データ",
+        "properties": {
+          "ledger_source_id": { "type": "string", "format": "uuid" },
+          "politician_id": { "type": "string", "format": "uuid" },
+          "organization_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "election_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "fiscal_year": { "type": "integer" },
+          "total_income": { "type": "integer" },
+          "total_expense": { "type": "integer" },
+          "journal_count": { "type": "integer" }
+        },
+        "required": [
+          "ledger_source_id",
+          "politician_id",
+          "fiscal_year",
+          "total_income",
+          "total_expense",
+          "journal_count"
+        ]
+      },
+      "SyncResult": {
+        "type": "object",
+        "properties": {
+          "created": { "type": "integer", "description": "作成された件数" },
+          "updated": { "type": "integer", "description": "更新された件数" },
+          "skipped": { "type": "integer", "description": "スキップされた件数" },
+          "errors": { "type": "integer", "description": "エラー件数" },
+          "error_details": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "journal_source_id": { "type": "string" },
+                "error": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "CreateUnlockRequest": {
+        "type": "object",
+        "properties": {
+          "ledger_id": { "type": "string", "format": "uuid" },
+          "ledger_type": {
+            "type": "string",
+            "enum": ["election", "organization"]
+          },
+          "fiscal_year": {
+            "type": "integer",
+            "description": "organization の場合は必須"
+          },
+          "requested_by_user_id": { "type": "string", "format": "uuid" },
+          "requested_by_email": { "type": "string", "format": "email" },
+          "reason": { "type": "string", "minLength": 10 }
+        },
+        "required": [
+          "ledger_id",
+          "ledger_type",
+          "requested_by_user_id",
+          "requested_by_email",
+          "reason"
+        ]
+      },
+      "UnlockRequest": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "ledger_id": { "type": "string", "format": "uuid" },
+          "ledger_type": {
+            "type": "string",
+            "enum": ["election", "organization"]
+          },
+          "fiscal_year": { "type": "integer", "nullable": true },
+          "requested_by_user_id": { "type": "string", "format": "uuid" },
+          "requested_by_email": { "type": "string", "format": "email" },
+          "reason": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "approved", "rejected"]
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "approved_by": { "type": "string", "nullable": true },
+          "unlock_expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "rejection_reason": { "type": "string", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AdminUser": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "name": { "type": "string", "nullable": true },
+          "role": { "type": "string", "enum": ["admin", "super_admin"] },
+          "is_active": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
         }
       }
     }

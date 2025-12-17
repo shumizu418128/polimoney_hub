@@ -71,7 +71,7 @@ app.onError((err, c) => {
   return c.json({ error: "Internal Server Error" }, 500);
 });
 
-const port = parseInt(Deno.env.get("PORT") || "8000");
+const port = parseInt(Deno.env.get("PORT") || "3722");
 console.log(`🚀 Polimoney Hub is running on http://localhost:${port}`);
 
 Deno.serve({ port }, app.fetch);

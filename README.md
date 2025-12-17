@@ -86,7 +86,7 @@ VS Code / Cursor で開き、「Reopen in Container」を選択するだけ！
 
 ```bash
 curl -H "X-API-Key: your-api-key" \
-     http://localhost:8000/api/v1/politicians
+     http://localhost:3722/api/v1/politicians
 ```
 
 ### 管理画面認証

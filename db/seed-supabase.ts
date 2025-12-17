@@ -82,13 +82,23 @@ const organizations = [
 ];
 
 // ============================================
+// ダミーデータ: 選挙区（テスト用）
+// ============================================
+
+const testDistricts = [
+  { id: "dddd1111-1111-1111-1111-111111111111", name: "東京都第1区", type: "HR", prefecture_codes: "13", municipality_code: null, description: "衆議院小選挙区 東京都第1区（テスト）", is_active: true },
+  { id: "dddd2222-2222-2222-2222-222222222222", name: "東京都知事選挙区", type: "PG", prefecture_codes: "13", municipality_code: null, description: "東京都知事選挙（テスト）", is_active: true },
+  { id: "dddd3333-3333-3333-3333-333333333333", name: "渋谷区長選挙区", type: "GM", prefecture_codes: "13", municipality_code: "131130", description: "渋谷区長選挙（テスト）", is_active: true },
+];
+
+// ============================================
 // ダミーデータ: 選挙
 // ============================================
 
 const elections = [
-  { id: "eeee1111-1111-1111-1111-111111111111", name: "第50回衆議院議員総選挙（テスト）", type: "HR", district_id: null, election_date: "2024-10-27", is_active: true },
-  { id: "eeee2222-2222-2222-2222-222222222222", name: "令和7年東京都知事選挙（テスト）", type: "PG", district_id: null, election_date: "2025-07-06", is_active: true },
-  { id: "eeee3333-3333-3333-3333-333333333333", name: "渋谷区長選挙（テスト）", type: "CM", district_id: null, election_date: "2025-04-20", is_active: true },
+  { id: "eeee1111-1111-1111-1111-111111111111", name: "2024年 第50回衆議院議員総選挙（テスト）", type: "HR", district_id: "dddd1111-1111-1111-1111-111111111111", election_date: "2024-10-27", is_active: true },
+  { id: "eeee2222-2222-2222-2222-222222222222", name: "令和7年東京都知事選挙（テスト）", type: "PG", district_id: "dddd2222-2222-2222-2222-222222222222", election_date: "2025-07-06", is_active: true },
+  { id: "eeee3333-3333-3333-3333-333333333333", name: "渋谷区長選挙（テスト）", type: "GM", district_id: "dddd3333-3333-3333-3333-333333333333", election_date: "2025-04-20", is_active: true },
 ];
 
 // ============================================
@@ -102,9 +112,9 @@ const publicLedgers = [
     organization_id: "aaaa1111-1111-1111-1111-111111111111",  // 山田太郎後援会
     election_id: "eeee1111-1111-1111-1111-111111111111",  // 第50回衆院選
     fiscal_year: 2024,
-    total_income: 5000000,
-    total_expense: 4500000,
-    journal_count: 25,
+    total_income: 2000000,  // 自己100万 + 個人寄附50万 + 政治団体30万 + 個人寄附20万
+    total_expense: 1837722,  // 各支出の合計
+    journal_count: 20,
     ledger_source_id: "aaaa0000-0000-0000-0000-000000000001",
     last_updated_at: new Date().toISOString(),
     first_synced_at: new Date().toISOString(),
@@ -115,9 +125,9 @@ const publicLedgers = [
     organization_id: "bbbb2222-1111-1111-1111-111111111111",  // 佐藤花子後援会
     election_id: "eeee1111-1111-1111-1111-111111111111",  // 第50回衆院選
     fiscal_year: 2024,
-    total_income: 3000000,
-    total_expense: 2800000,
-    journal_count: 18,
+    total_income: 800000,  // 自己50万 + 個人寄附30万
+    total_expense: 963000,  // ポスター85万 + 事務所6万 + 弁当2.8万 + 人件費2.5万
+    journal_count: 6,
     ledger_source_id: "aaaa0000-0000-0000-0000-000000000002",
     last_updated_at: new Date().toISOString(),
     first_synced_at: new Date().toISOString(),
@@ -125,20 +135,49 @@ const publicLedgers = [
 ];
 
 // ============================================
-// ダミーデータ: 公開仕訳
+// ダミーデータ: 公開仕訳（Polimoney API テスト用に充実）
 // ============================================
 
 const publicJournals = [
-  // 山田太郎の仕訳
-  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000001", date: "2024-01-15", description: "個人献金", amount: 100000, contact_name: "非公開", contact_type: "person", account_code: "income_donation", content_hash: "hash001", synced_at: new Date().toISOString() },
-  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000002", date: "2024-02-01", description: "事務所賃料", amount: 80000, contact_name: "○○不動産", contact_type: "corporation", account_code: "expense_office", content_hash: "hash002", synced_at: new Date().toISOString() },
-  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000003", date: "2024-02-15", description: "ポスター印刷", amount: 150000, contact_name: "△△印刷", contact_type: "corporation", account_code: "expense_campaign", content_hash: "hash003", synced_at: new Date().toISOString() },
-  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000004", date: "2024-03-01", description: "事務所賃料", amount: 80000, contact_name: "○○不動産", contact_type: "corporation", account_code: "expense_office", content_hash: "hash004", synced_at: new Date().toISOString() },
-  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000005", date: "2024-03-10", description: "企業献金", amount: 500000, contact_name: "株式会社テスト", contact_type: "corporation", account_code: "income_donation", content_hash: "hash005", synced_at: new Date().toISOString() },
+  // ================================
+  // 山田太郎の仕訳（選挙運動収支報告書風）
+  // ================================
+  // 収入
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000001", date: "2024-10-01", description: "自己資金", amount: 1000000, contact_name: null, contact_type: null, account_code: "REV_SELF_FINANCING", classification: null, content_hash: "hash001", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000002", date: "2024-10-05", description: "個人寄附", amount: 500000, contact_name: "個人A", contact_type: "person", account_code: "REV_DONATION_INDIVIDUAL_ELEC", classification: null, content_hash: "hash002", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000003", date: "2024-10-10", description: "政治団体からの寄附", amount: 300000, contact_name: "民主未来党", contact_type: "organization", account_code: "REV_DONATION_POLITICAL_ELEC", classification: null, content_hash: "hash003", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000004", date: "2024-10-12", description: "個人寄附", amount: 200000, contact_name: "個人B", contact_type: "person", account_code: "REV_DONATION_INDIVIDUAL_ELEC", classification: null, content_hash: "hash004", synced_at: new Date().toISOString() },
+
+  // 支出 - 立候補準備
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000010", date: "2024-10-01", description: "選挙カー看板制作", amount: 308800, contact_name: "○○看板店", contact_type: "corporation", account_code: "EXP_ADVERTISING_ELEC", classification: "pre-campaign", content_hash: "hash010", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000011", date: "2024-10-05", description: "選挙運動用ビラ印刷", amount: 123680, contact_name: "△△印刷", contact_type: "corporation", account_code: "EXP_PRINTING_ELEC", classification: "pre-campaign", public_expense_amount: 123680, content_hash: "hash011", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000012", date: "2024-10-08", description: "選挙運動用ポスター印刷", amount: 1012176, contact_name: "△△印刷", contact_type: "corporation", account_code: "EXP_PRINTING_ELEC", classification: "pre-campaign", public_expense_amount: 1012176, content_hash: "hash012", synced_at: new Date().toISOString() },
+
+  // 支出 - 選挙運動
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000020", date: "2024-10-15", description: "車上運動員報酬", amount: 30605, contact_name: "運動員A", contact_type: "person", account_code: "EXP_PERSONNEL_ELEC", classification: "campaign", note: "10/15~17 3日分", content_hash: "hash020", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000021", date: "2024-10-18", description: "車上運動員報酬", amount: 20497, contact_name: "運動員A", contact_type: "person", account_code: "EXP_PERSONNEL_ELEC", classification: "campaign", note: "10/18~19 2日分", content_hash: "hash021", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000022", date: "2024-10-20", description: "車上運動員報酬", amount: 20226, contact_name: "運動員A", contact_type: "person", account_code: "EXP_PERSONNEL_ELEC", classification: "campaign", note: "10/20~21 2日分", content_hash: "hash022", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000023", date: "2024-10-15", description: "選挙事務所借り上げ", amount: 80000, contact_name: "○○不動産", contact_type: "corporation", account_code: "EXP_BUILDING_ELEC", classification: "campaign", note: "10/1~10/31", content_hash: "hash023", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000024", date: "2024-10-18", description: "ビラの新聞折込", amount: 65736, contact_name: "○○新聞販売店", contact_type: "corporation", account_code: "EXP_ADVERTISING_ELEC", classification: "campaign", note: "35,000部", content_hash: "hash024", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000025", date: "2024-10-15", description: "弁当代", amount: 36800, contact_name: "○○弁当", contact_type: "corporation", account_code: "EXP_FOOD_ELEC", classification: "campaign", note: "40個", content_hash: "hash025", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000026", date: "2024-10-16", description: "弁当代", amount: 24800, contact_name: "○○弁当", contact_type: "corporation", account_code: "EXP_FOOD_ELEC", classification: "campaign", note: "32個", content_hash: "hash026", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000027", date: "2024-10-17", description: "茶菓子", amount: 5638, contact_name: "コンビニ", contact_type: "corporation", account_code: "EXP_FOOD_ELEC", classification: "campaign", content_hash: "hash027", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000028", date: "2024-10-15", description: "テープ・マジック等", amount: 2104, contact_name: "文具店", contact_type: "corporation", account_code: "EXP_STATIONERY_ELEC", classification: "campaign", content_hash: "hash028", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000029", date: "2024-10-12", description: "スタッフTシャツ", amount: 104280, contact_name: "プリント会社", contact_type: "corporation", account_code: "EXP_MISC_ELEC", classification: "campaign", note: "30枚", content_hash: "hash029", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff1111-1111-1111-1111-111111111111", journal_source_id: "00010001-0001-0001-0001-000000000030", date: "2024-10-20", description: "電話回線使用料", amount: 2380, contact_name: "NTT", contact_type: "corporation", account_code: "EXP_COMMUNICATION_ELEC", classification: "campaign", content_hash: "hash030", synced_at: new Date().toISOString() },
+
+  // ================================
   // 佐藤花子の仕訳
-  { ledger_id: "ffff2222-2222-2222-2222-222222222222", journal_source_id: "00020002-0002-0002-0002-000000000001", date: "2024-01-20", description: "個人献金", amount: 50000, contact_name: "非公開", contact_type: "person", account_code: "income_donation", content_hash: "hash101", synced_at: new Date().toISOString() },
-  { ledger_id: "ffff2222-2222-2222-2222-222222222222", journal_source_id: "00020002-0002-0002-0002-000000000002", date: "2024-02-01", description: "事務所賃料", amount: 60000, contact_name: "□□ビル管理", contact_type: "corporation", account_code: "expense_office", content_hash: "hash102", synced_at: new Date().toISOString() },
-  { ledger_id: "ffff2222-2222-2222-2222-222222222222", journal_source_id: "00020002-0002-0002-0002-000000000003", date: "2024-02-20", description: "チラシ印刷", amount: 80000, contact_name: "◇◇プリント", contact_type: "corporation", account_code: "expense_campaign", content_hash: "hash103", synced_at: new Date().toISOString() },
+  // ================================
+  // 収入
+  { ledger_id: "ffff2222-2222-2222-2222-222222222222", journal_source_id: "00020002-0002-0002-0002-000000000001", date: "2024-10-01", description: "自己資金", amount: 500000, contact_name: null, contact_type: null, account_code: "REV_SELF_FINANCING", classification: null, content_hash: "hash101", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff2222-2222-2222-2222-222222222222", journal_source_id: "00020002-0002-0002-0002-000000000002", date: "2024-10-08", description: "個人寄附", amount: 300000, contact_name: "個人C", contact_type: "person", account_code: "REV_DONATION_INDIVIDUAL_ELEC", classification: null, content_hash: "hash102", synced_at: new Date().toISOString() },
+
+  // 支出
+  { ledger_id: "ffff2222-2222-2222-2222-222222222222", journal_source_id: "00020002-0002-0002-0002-000000000010", date: "2024-10-05", description: "選挙運動用ポスター印刷", amount: 850000, contact_name: "◇◇プリント", contact_type: "corporation", account_code: "EXP_PRINTING_ELEC", classification: "pre-campaign", public_expense_amount: 850000, content_hash: "hash110", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff2222-2222-2222-2222-222222222222", journal_source_id: "00020002-0002-0002-0002-000000000011", date: "2024-10-15", description: "選挙事務所借り上げ", amount: 60000, contact_name: "□□ビル管理", contact_type: "corporation", account_code: "EXP_BUILDING_ELEC", classification: "campaign", content_hash: "hash111", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff2222-2222-2222-2222-222222222222", journal_source_id: "00020002-0002-0002-0002-000000000012", date: "2024-10-18", description: "弁当代", amount: 28000, contact_name: "△△弁当", contact_type: "corporation", account_code: "EXP_FOOD_ELEC", classification: "campaign", note: "35個", content_hash: "hash112", synced_at: new Date().toISOString() },
+  { ledger_id: "ffff2222-2222-2222-2222-222222222222", journal_source_id: "00020002-0002-0002-0002-000000000013", date: "2024-10-20", description: "車上運動員報酬", amount: 25000, contact_name: "運動員B", contact_type: "person", account_code: "EXP_PERSONNEL_ELEC", classification: "campaign", content_hash: "hash113", synced_at: new Date().toISOString() },
 ];
 
 // ============================================
@@ -205,6 +244,17 @@ async function seedMunicipalities() {
 
   const { count } = await supabase.from("municipalities").select("*", { count: "exact", head: true });
   console.log(`   ✅ municipalities: ${count} 件`);
+}
+
+async function seedTestDistricts() {
+  console.log("🗺️ Seeding test districts...");
+  const { error } = await supabase
+    .from("districts")
+    .upsert(testDistricts, { onConflict: "id", ignoreDuplicates: true });
+
+  if (error) throw error;
+
+  console.log(`   ✅ test districts: ${testDistricts.length} 件`);
 }
 
 async function seedPoliticians() {
@@ -304,6 +354,7 @@ async function seedAll() {
   console.log("\n📦 Seeding all data...\n");
 
   await seedMunicipalities();
+  await seedTestDistricts();  // 選挙より先に選挙区を投入
   await seedPoliticians();
   await seedOrganizations();
   await seedElections();
@@ -318,6 +369,7 @@ async function seedAll() {
 async function seedDummyOnly() {
   console.log("\n📦 Seeding dummy data only...\n");
 
+  await seedTestDistricts();  // 選挙より先に選挙区を投入
   await seedPoliticians();
   await seedOrganizations();
   await seedElections();

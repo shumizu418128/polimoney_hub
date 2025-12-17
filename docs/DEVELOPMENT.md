@@ -32,14 +32,14 @@ deno task dev
 deno task admin:dev
 ```
 
-- API: `http://localhost:8000`
+- API: `http://localhost:3722`
 - 管理画面: `http://localhost:3002`
 
 ## ポート一覧
 
 | サービス     | ポート | 説明                |
 | ------------ | ------ | ------------------- |
-| Hub API      | 8000   | メイン API サーバー |
+| Hub API      | 3722   | メイン API サーバー |
 | Hub Admin UI | 3002   | 管理画面            |
 | PostgreSQL   | 5432   | データベース        |
 
@@ -49,10 +49,10 @@ deno task admin:dev
 
 ```
 # Hub API（コンテナ間）
-http://hub-app:8000
+http://hub-app:3722
 
 # Hub API（ホストから）
-http://localhost:8000
+http://localhost:3722
 
 # PostgreSQL
 postgres://postgres:postgres@hub-db:5432/polimoney_hub
@@ -70,7 +70,7 @@ postgres://postgres:postgres@hub-db:5432/polimoney_hub
 │  │   Ledger    │ ──→  │            Hub                │ │
 │  │   :3001     │      │  ┌─────────┐  ┌────────────┐ │ │
 │  └─────────────┘      │  │   API   │  │  Admin UI  │ │ │
-│                       │  │  :8000  │  │   :3002    │ │ │
+│                       │  │  :3722  │  │   :3002    │ │ │
 │                       │  └────┬────┘  └────────────┘ │ │
 │                       └───────┼───────────────────────┘ │
 │                               │                          │

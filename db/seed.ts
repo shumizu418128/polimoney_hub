@@ -3,7 +3,7 @@
  * 使用方法: deno run --allow-net db/seed.ts
  */
 
-const API_BASE = "http://localhost:8000/api/v1";
+const API_BASE = "http://localhost:3722/api/v1";
 const API_KEY = "dev-api-key-12345";
 
 const headers = {

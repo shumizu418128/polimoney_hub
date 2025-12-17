@@ -737,3 +737,51 @@ adminRouter.put("/unlock-requests/:id/reject", async (c) => {
   return c.json({ data });
 });
 
+// ============================================
+// Ledger 登録リクエスト管理（管理者用）
+// ============================================
+
+interface RegistrationRequest {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  ledger_user_id: string | null;
+  ledger_supabase_url: string | null;
+  verification_doc_url: string;
+  verification_doc_type: string | null;
+  verification_doc_name: string | null;
+  status: string;
+  rejection_reason: string | null;
+  notes: string | null;
+  admin_notes: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
+
+// Ledger 登録リクエスト一覧（管理者用）
+adminRouter.get("/registration-requests", async (c) => {
+  const status = c.req.query("status");
+  const supabase = getServiceClient();
+
+  let query = supabase
+    .from("registration_requests")
+    .select("*", { count: "exact" });
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { data, error, count } = await query.order("created_at", {
+    ascending: false,
+  });
+
+  if (error) {
+    console.error("Failed to fetch registration requests:", error);
+    return c.json({ error: "Failed to fetch registration requests" }, 500);
+  }
+
+  return c.json({ data, total: count });
+});
+

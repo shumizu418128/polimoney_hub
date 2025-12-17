@@ -7,7 +7,7 @@
 
 import { getCookies, setCookie, deleteCookie } from "$std/http/cookie.ts";
 
-const API_BASE_URL = Deno.env.get("API_BASE_URL") || "http://localhost:8000";
+const API_BASE_URL = Deno.env.get("API_BASE_URL") || "http://localhost:3722";
 const COOKIE_OPTIONS = {
   path: "/",
   httpOnly: true,
