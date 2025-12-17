@@ -14,6 +14,7 @@ export default function Layout({ children, active }: LayoutProps) {
     { href: "/elections", label: "選挙マスタ", icon: "📅" },
     { href: "/organizations", label: "政治団体マスタ", icon: "🏢" },
     { href: "/users", label: "管理者ユーザー", icon: "👥" },
+    { href: "/settings", label: "設定", icon: "⚙️" },
   ];
 
   return (
