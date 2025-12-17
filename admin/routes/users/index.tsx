@@ -15,6 +15,7 @@ interface AdminUser {
 interface PageData {
   users: AdminUser[];
   currentUser: AuthState["user"];
+  devMode: boolean;
   error?: string;
   success?: string;
 }
@@ -32,11 +33,13 @@ export const handler: Handlers<PageData, AuthState> = {
       return ctx.render({
         users: data.data || [],
         currentUser: ctx.state.user,
+        devMode: ctx.state.devMode,
       });
     } catch (error) {
       return ctx.render({
         users: [],
         currentUser: ctx.state.user,
+        devMode: ctx.state.devMode,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -54,11 +57,12 @@ export const handler: Handlers<PageData, AuthState> = {
         const role = form.get("role")?.toString() || "admin";
 
         if (!email) {
-          return ctx.render({
-            users: [],
-            currentUser: ctx.state.user,
-            error: "メールアドレスは必須です",
-          });
+        return ctx.render({
+          users: [],
+          currentUser: ctx.state.user,
+          devMode: ctx.state.devMode,
+          error: "メールアドレスは必須です",
+        });
         }
 
         const res = await fetch(`${apiBase}/api/admin/users`, {
@@ -167,6 +171,7 @@ export const handler: Handlers<PageData, AuthState> = {
       return ctx.render({
         users: data.data || [],
         currentUser: ctx.state.user,
+        devMode: ctx.state.devMode,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -189,7 +194,7 @@ export default function UsersPage({ data, url }: PageProps<PageData>) {
   const success = url.searchParams.get("success");
 
   return (
-    <Layout active="/users">
+    <Layout active="/users" devMode={data.devMode}>
       <div class="space-y-6">
         <div class="flex items-center justify-between">
           <h1 class="text-3xl font-bold">👥 管理者ユーザー</h1>

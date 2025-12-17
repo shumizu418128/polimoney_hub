@@ -21,6 +21,7 @@ const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/reset-password"];
 export interface AuthState {
   user: AdminUser | null;
   accessToken: string | null;
+  devMode: boolean;
 }
 
 export async function handler(
@@ -38,6 +39,7 @@ export async function handler(
   if (PUBLIC_PATHS.some((path) => url.pathname.startsWith(path))) {
     ctx.state.user = null;
     ctx.state.accessToken = null;
+    ctx.state.devMode = false;
     return ctx.next();
   }
 
@@ -85,6 +87,22 @@ export async function handler(
   // 認証成功 - state にユーザー情報を設定
   ctx.state.user = user;
   ctx.state.accessToken = accessToken;
+
+  // dev_mode を API から取得
+  let devMode = false;
+  try {
+    const apiBase = Deno.env.get("API_BASE_URL") || "http://localhost:3722";
+    const res = await fetch(`${apiBase}/api/admin/users/${user.id}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      devMode = data.data?.dev_mode ?? false;
+    }
+  } catch {
+    // エラー時はデフォルト値
+  }
+  ctx.state.devMode = devMode;
 
   return ctx.next();
 }

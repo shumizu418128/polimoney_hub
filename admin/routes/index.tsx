@@ -8,6 +8,7 @@ interface DashboardData {
   totalElections: number;
   totalOrganizations: number;
   totalAdminUsers: number;
+  devMode: boolean;
   error?: string;
 }
 
@@ -50,6 +51,7 @@ export const handler: Handlers<DashboardData, AuthState> = {
         totalElections: electionsData.data?.length || 0,
         totalOrganizations: orgsData.data?.length || 0,
         totalAdminUsers: usersData.data?.filter((u: { is_active: boolean }) => u.is_active).length || 0,
+        devMode: ctx.state.devMode,
       });
     } catch (error) {
       return ctx.render({
@@ -58,6 +60,7 @@ export const handler: Handlers<DashboardData, AuthState> = {
         totalElections: 0,
         totalOrganizations: 0,
         totalAdminUsers: 0,
+        devMode: ctx.state.devMode,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -104,7 +107,7 @@ export default function Dashboard({ data }: PageProps<DashboardData>) {
   ];
 
   return (
-    <Layout active="/">
+    <Layout active="/" devMode={data.devMode}>
       <div class="space-y-6">
         <h1 class="text-3xl font-bold">ダッシュボード</h1>
 

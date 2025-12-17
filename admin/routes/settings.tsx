@@ -218,7 +218,7 @@ async function renderWithDevMode(
 
 export default function SettingsPage({ data }: PageProps<PageData>) {
   return (
-    <Layout active="/settings">
+    <Layout active="/settings" devMode={data.user?.dev_mode}>
       <div class="space-y-6">
         <h1 class="text-3xl font-bold">⚙️ 設定</h1>
 
@@ -332,7 +332,7 @@ export default function SettingsPage({ data }: PageProps<PageData>) {
               有効にすると、テスト申請（<code class="font-mono text-xs">is_test=true</code>）が
               Ledger 登録申請一覧に表示されます。
             </p>
-            <form method="POST">
+            <form method="POST" id="dev-mode-form">
               <input type="hidden" name="action" value="toggle_dev_mode" />
               <input
                 type="hidden"
@@ -343,17 +343,14 @@ export default function SettingsPage({ data }: PageProps<PageData>) {
                 <span class={data.user?.dev_mode ? "opacity-50" : "font-bold"}>
                   オフ
                 </span>
-                <button
-                  type="submit"
-                  class={`toggle toggle-lg ${data.user?.dev_mode ? "toggle-warning" : ""}`}
-                  aria-label="開発モード切り替え"
-                >
+                <label class="swap">
                   <input
                     type="checkbox"
                     checked={data.user?.dev_mode}
-                    class="sr-only"
+                    class={`toggle toggle-lg ${data.user?.dev_mode ? "toggle-warning" : ""}`}
+                    onChange="this.form.submit()"
                   />
-                </button>
+                </label>
                 <span class={data.user?.dev_mode ? "font-bold" : "opacity-50"}>
                   オン
                 </span>

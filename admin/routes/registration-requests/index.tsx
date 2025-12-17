@@ -103,7 +103,7 @@ export const handler: Handlers<PageData, AuthState> = {
 
 export default function RegistrationRequests({ data }: PageProps<PageData>) {
   return (
-    <Layout active="/registration-requests">
+    <Layout active="/registration-requests" devMode={data.devMode}>
       <div class="space-y-6">
         <div class="flex items-center justify-between">
           <h1 class="text-3xl font-bold">👤 Ledger 登録申請</h1>

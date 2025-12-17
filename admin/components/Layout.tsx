@@ -3,9 +3,10 @@ import { ComponentChildren } from "preact";
 interface LayoutProps {
   children: ComponentChildren;
   active?: string;
+  devMode?: boolean;
 }
 
-export default function Layout({ children, active }: LayoutProps) {
+export default function Layout({ children, active, devMode }: LayoutProps) {
   const menuItems = [
     { href: "/", label: "ダッシュボード", icon: "📊" },
     { href: "/registration-requests", label: "Ledger登録申請", icon: "👤" },
@@ -22,6 +23,13 @@ export default function Layout({ children, active }: LayoutProps) {
       <input id="drawer" type="checkbox" class="drawer-toggle" />
 
       <div class="drawer-content flex flex-col">
+        {/* 開発モードバナー */}
+        {devMode && (
+          <div class="bg-warning text-warning-content text-center py-1 text-sm font-medium">
+            🧪 開発モード
+          </div>
+        )}
+
         {/* Navbar */}
         <div class="navbar bg-primary text-primary-content shadow-lg lg:hidden">
           <div class="flex-none">
