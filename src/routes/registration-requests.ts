@@ -4,8 +4,8 @@
  * Ledger ユーザーの登録申請を受け付け・管理
  */
 
-import { Hono } from "https://deno.land/x/hono@v4.3.11/mod.ts";
-import { getSupabaseClient } from "../lib/supabase.ts";
+import { Hono } from "hono";
+import { getServiceClient } from "../lib/supabase.ts";
 
 const app = new Hono();
 
@@ -39,7 +39,7 @@ app.post("/", async (c) => {
       );
     }
 
-    const supabase = getSupabaseClient();
+    const supabase = getServiceClient();
 
     // 重複チェック（同じメールで pending の申請がないか）
     const { data: existingRequest } = await supabase
@@ -107,7 +107,7 @@ app.get("/", async (c) => {
     const limit = parseInt(c.req.query("limit") || "50");
     const offset = parseInt(c.req.query("offset") || "0");
 
-    const supabase = getSupabaseClient();
+    const supabase = getServiceClient();
     const isProduction = Deno.env.get("DENO_ENV") === "production";
 
     let query = supabase
@@ -153,7 +153,7 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
   try {
     const id = c.req.param("id");
-    const supabase = getSupabaseClient();
+    const supabase = getServiceClient();
 
     const { data, error } = await supabase
       .from("registration_requests")
@@ -183,7 +183,7 @@ app.put("/:id/approve", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json().catch(() => ({}));
-    const supabase = getSupabaseClient();
+    const supabase = getServiceClient();
 
     // 現在の申請を取得
     const { data: request, error: fetchError } = await supabase
@@ -243,7 +243,7 @@ app.put("/:id/reject", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
-    const supabase = getSupabaseClient();
+    const supabase = getServiceClient();
 
     if (!body.rejection_reason) {
       return c.json({ error: "rejection_reason is required" }, 400);
@@ -304,7 +304,7 @@ app.put("/:id/reject", async (c) => {
 app.get("/check/:email", async (c) => {
   try {
     const email = decodeURIComponent(c.req.param("email"));
-    const supabase = getSupabaseClient();
+    const supabase = getServiceClient();
 
     const { data, error } = await supabase
       .from("registration_requests")
