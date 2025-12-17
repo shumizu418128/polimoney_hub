@@ -49,8 +49,9 @@ export default function Layout({ children, active, devMode }: LayoutProps) {
               </svg>
             </label>
           </div>
-          <div class="flex-1">
-            <span class="text-xl font-bold">Polimoney Hub</span>
+          <div class="flex-1 flex items-center gap-2">
+            <img src="/logo-hub.svg" alt="" class="h-6 w-6" />
+            <span class="font-bold" style="font-feature-settings: 'palt' 1;">Polimoney Hub</span>
           </div>
         </div>
 
@@ -63,8 +64,11 @@ export default function Layout({ children, active, devMode }: LayoutProps) {
         <label for="drawer" class="drawer-overlay"></label>
         <aside class="bg-primary text-primary-content w-64 min-h-screen flex flex-col">
           <div class="p-4 border-b border-primary-content/20">
-            <h1 class="text-xl font-bold">🍋 Polimoney Hub</h1>
-            <p class="text-sm opacity-70">管理画面</p>
+            <a href="/" class="flex items-center gap-2 hover:opacity-80">
+              <img src="/logo-hub.svg" alt="" class="h-8 w-8" />
+              <span class="font-bold text-lg" style="font-feature-settings: 'palt' 1;">Polimoney Hub</span>
+            </a>
+            <p class="text-sm opacity-70 mt-1">管理画面</p>
           </div>
 
           {/* メインメニュー */}
