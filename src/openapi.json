@@ -15,7 +15,7 @@
       "description": "ローカル開発環境"
     },
     {
-      "url": "https://polimoney-hub.moai-redcap.deno.net",
+      "url": "https://polimoney-hub.dd2030-topics.deno.net",
       "description": "本番環境"
     }
   ],
@@ -334,7 +334,9 @@
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": { "$ref": "#/components/schemas/PublicSubsidyItem" }
+                      "items": {
+                        "$ref": "#/components/schemas/PublicSubsidyItem"
+                      }
                     }
                   }
                 }
@@ -358,9 +360,18 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "account_codes": { "type": "string", "format": "date-time" },
-                    "election_types": { "type": "string", "format": "date-time" },
-                    "municipalities": { "type": "string", "format": "date-time" }
+                    "account_codes": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "election_types": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "municipalities": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
                   }
                 }
               }
@@ -627,7 +638,10 @@
             "name": "status",
             "in": "query",
             "description": "ステータスでフィルタ",
-            "schema": { "type": "string", "enum": ["pending", "approved", "rejected"] }
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "approved", "rejected"]
+            }
           },
           {
             "name": "ledger_id",
@@ -711,7 +725,9 @@
                   "type": "object",
                   "properties": {
                     "is_unlocked": { "type": "boolean" },
-                    "unlock_request": { "$ref": "#/components/schemas/UnlockRequest" },
+                    "unlock_request": {
+                      "$ref": "#/components/schemas/UnlockRequest"
+                    },
                     "expires_at": { "type": "string", "format": "date-time" },
                     "pending_request": { "type": "object", "nullable": true }
                   }
@@ -732,7 +748,10 @@
           {
             "name": "status",
             "in": "query",
-            "schema": { "type": "string", "enum": ["pending", "approved", "rejected", "needs_info"] }
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "approved", "rejected", "needs_info"]
+            }
           }
         ],
         "responses": {
@@ -746,7 +765,12 @@
         "summary": "選挙リクエスト承認",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -755,7 +779,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "area_code": { "type": "string", "description": "正式な選挙区コード" },
+                  "area_code": {
+                    "type": "string",
+                    "description": "正式な選挙区コード"
+                  },
                   "reviewed_by": { "type": "string" }
                 },
                 "required": ["area_code"]
@@ -775,7 +802,12 @@
         "summary": "選挙リクエスト却下",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -816,7 +848,12 @@
         "summary": "団体リクエスト承認",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "content": {
@@ -824,7 +861,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "politician_id": { "type": "string", "description": "紐づける政治家 ID" },
+                  "politician_id": {
+                    "type": "string",
+                    "description": "紐づける政治家 ID"
+                  },
                   "reviewed_by": { "type": "string" }
                 }
               }
@@ -842,7 +882,12 @@
         "summary": "団体リクエスト却下",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -883,7 +928,12 @@
         "summary": "ロック解除承認",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "content": {
@@ -892,7 +942,11 @@
                 "type": "object",
                 "properties": {
                   "approved_by": { "type": "string" },
-                  "unlock_days": { "type": "integer", "default": 7, "description": "解除有効日数" }
+                  "unlock_days": {
+                    "type": "integer",
+                    "default": 7,
+                    "description": "解除有効日数"
+                  }
                 }
               }
             }
@@ -909,7 +963,12 @@
         "summary": "ロック解除却下",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -969,7 +1028,11 @@
                 "properties": {
                   "email": { "type": "string", "format": "email" },
                   "name": { "type": "string" },
-                  "role": { "type": "string", "enum": ["admin", "super_admin"], "default": "admin" }
+                  "role": {
+                    "type": "string",
+                    "enum": ["admin", "super_admin"],
+                    "default": "admin"
+                  }
                 },
                 "required": ["email"]
               }
@@ -988,7 +1051,12 @@
         "summary": "管理者詳細",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "responses": {
           "200": { "description": "成功" },
@@ -1000,7 +1068,12 @@
         "summary": "管理者情報更新",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "requestBody": {
           "content": {
@@ -1009,7 +1082,10 @@
                 "type": "object",
                 "properties": {
                   "name": { "type": "string" },
-                  "role": { "type": "string", "enum": ["admin", "super_admin"] },
+                  "role": {
+                    "type": "string",
+                    "enum": ["admin", "super_admin"]
+                  },
                   "is_active": { "type": "boolean" }
                 }
               }
@@ -1025,7 +1101,12 @@
         "summary": "管理者削除（論理削除）",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "responses": {
           "200": { "description": "削除成功" }
@@ -1038,7 +1119,12 @@
         "summary": "パスワードリセットメール送信",
         "security": [{ "BearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
         ],
         "responses": {
           "200": { "description": "送信成功" },
@@ -1202,21 +1288,50 @@
         "type": "object",
         "description": "Ledger から送信される同期データ",
         "properties": {
-          "journal_source_id": { "type": "string", "format": "uuid", "description": "Ledger 側の仕訳 ID" },
-          "ledger_source_id": { "type": "string", "format": "uuid", "description": "Ledger 側の台帳 ID" },
+          "journal_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ledger 側の仕訳 ID"
+          },
+          "ledger_source_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Ledger 側の台帳 ID"
+          },
           "date": { "type": "string", "format": "date", "nullable": true },
-          "description": { "type": "string", "nullable": true, "description": "摘要" },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "摘要"
+          },
           "amount": { "type": "integer" },
-          "contact_name": { "type": "string", "nullable": true, "description": "関係者名（匿名化済み）" },
+          "contact_name": {
+            "type": "string",
+            "nullable": true,
+            "description": "関係者名（匿名化済み）"
+          },
           "contact_type": { "type": "string", "nullable": true },
           "account_code": { "type": "string", "description": "勘定科目コード" },
-          "classification": { "type": "string", "nullable": true, "enum": ["campaign", "pre-campaign"] },
+          "classification": {
+            "type": "string",
+            "nullable": true,
+            "enum": ["campaign", "pre-campaign"]
+          },
           "non_monetary_basis": { "type": "string", "nullable": true },
           "note": { "type": "string", "nullable": true },
           "public_expense_amount": { "type": "integer", "nullable": true },
-          "content_hash": { "type": "string", "description": "重複検知用ハッシュ" }
+          "content_hash": {
+            "type": "string",
+            "description": "重複検知用ハッシュ"
+          }
         },
-        "required": ["journal_source_id", "ledger_source_id", "amount", "account_code", "content_hash"]
+        "required": [
+          "journal_source_id",
+          "ledger_source_id",
+          "amount",
+          "account_code",
+          "content_hash"
+        ]
       },
       "SyncLedgerInput": {
         "type": "object",
@@ -1224,14 +1339,29 @@
         "properties": {
           "ledger_source_id": { "type": "string", "format": "uuid" },
           "politician_id": { "type": "string", "format": "uuid" },
-          "organization_id": { "type": "string", "format": "uuid", "nullable": true },
-          "election_id": { "type": "string", "format": "uuid", "nullable": true },
+          "organization_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "election_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
           "fiscal_year": { "type": "integer" },
           "total_income": { "type": "integer" },
           "total_expense": { "type": "integer" },
           "journal_count": { "type": "integer" }
         },
-        "required": ["ledger_source_id", "politician_id", "fiscal_year", "total_income", "total_expense", "journal_count"]
+        "required": [
+          "ledger_source_id",
+          "politician_id",
+          "fiscal_year",
+          "total_income",
+          "total_expense",
+          "journal_count"
+        ]
       },
       "SyncResult": {
         "type": "object",
@@ -1256,28 +1386,54 @@
         "type": "object",
         "properties": {
           "ledger_id": { "type": "string", "format": "uuid" },
-          "ledger_type": { "type": "string", "enum": ["election", "organization"] },
-          "fiscal_year": { "type": "integer", "description": "organization の場合は必須" },
+          "ledger_type": {
+            "type": "string",
+            "enum": ["election", "organization"]
+          },
+          "fiscal_year": {
+            "type": "integer",
+            "description": "organization の場合は必須"
+          },
           "requested_by_user_id": { "type": "string", "format": "uuid" },
           "requested_by_email": { "type": "string", "format": "email" },
           "reason": { "type": "string", "minLength": 10 }
         },
-        "required": ["ledger_id", "ledger_type", "requested_by_user_id", "requested_by_email", "reason"]
+        "required": [
+          "ledger_id",
+          "ledger_type",
+          "requested_by_user_id",
+          "requested_by_email",
+          "reason"
+        ]
       },
       "UnlockRequest": {
         "type": "object",
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "ledger_id": { "type": "string", "format": "uuid" },
-          "ledger_type": { "type": "string", "enum": ["election", "organization"] },
+          "ledger_type": {
+            "type": "string",
+            "enum": ["election", "organization"]
+          },
           "fiscal_year": { "type": "integer", "nullable": true },
           "requested_by_user_id": { "type": "string", "format": "uuid" },
           "requested_by_email": { "type": "string", "format": "email" },
           "reason": { "type": "string" },
-          "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-          "approved_at": { "type": "string", "format": "date-time", "nullable": true },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "approved", "rejected"]
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
           "approved_by": { "type": "string", "nullable": true },
-          "unlock_expires_at": { "type": "string", "format": "date-time", "nullable": true },
+          "unlock_expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
           "rejection_reason": { "type": "string", "nullable": true },
           "created_at": { "type": "string", "format": "date-time" },
           "updated_at": { "type": "string", "format": "date-time" }
