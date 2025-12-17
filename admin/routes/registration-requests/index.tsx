@@ -72,8 +72,8 @@ export const handler: Handlers<PageData, AuthState> = {
     try {
       const params = new URLSearchParams();
       if (status) params.set("status", status);
-      // dev_mode が有効な場合はテスト申請を含める
-      if (devMode) params.set("include_test", "true");
+      // dev_mode が有効な場合はテスト申請のみ表示
+      if (devMode) params.set("test_only", "true");
       const queryString = params.toString();
       const queryParams = queryString ? `?${queryString}` : "";
 
@@ -118,7 +118,7 @@ export default function RegistrationRequests({ data }: PageProps<PageData>) {
         {data.devMode && (
           <div class="alert alert-info text-sm">
             <span>
-              ℹ️ 開発モードが有効です。テスト申請（<code class="font-mono">is_test=true</code>）も表示されています。
+              ℹ️ 開発モードが有効です。テスト申請（<code class="font-mono">is_test=true</code>）のみ表示しています。
               <a href="/settings" class="link ml-2">設定で切り替え →</a>
             </span>
           </div>

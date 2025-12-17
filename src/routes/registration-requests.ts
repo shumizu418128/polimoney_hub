@@ -103,7 +103,8 @@ app.post("/", async (c) => {
 app.get("/", async (c) => {
   try {
     const status = c.req.query("status");
-    const includeTest = c.req.query("include_test") === "true";
+    const testOnly = c.req.query("test_only") === "true"; // テスト申請のみ
+    const includeTest = c.req.query("include_test") === "true"; // テスト申請も含める
     const limit = parseInt(c.req.query("limit") || "50");
     const offset = parseInt(c.req.query("offset") || "0");
 
@@ -120,8 +121,11 @@ app.get("/", async (c) => {
       query = query.eq("status", status);
     }
 
-    // 本番環境ではテスト申請を除外（明示的に include_test=true でない限り）
-    if (isProduction && !includeTest) {
+    // test_only=true の場合はテスト申請のみ表示
+    if (testOnly) {
+      query = query.eq("is_test", true);
+    } else if (isProduction && !includeTest) {
+      // 本番環境ではテスト申請を除外（明示的に include_test=true でない限り）
       query = query.eq("is_test", false);
     }
 
