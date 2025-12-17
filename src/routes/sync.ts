@@ -41,6 +41,8 @@ interface SyncJournalInput {
   public_expense_amount: number | null;
   /** コンテンツハッシュ（重複検知用） */
   content_hash: string;
+  /** テストデータフラグ */
+  is_test?: boolean;
 }
 
 interface SyncJournalsRequest {
@@ -79,6 +81,8 @@ interface SyncLedgerInput {
   total_expense: number;
   /** 仕訳件数 */
   journal_count: number;
+  /** テストデータフラグ */
+  is_test?: boolean;
 }
 
 interface SyncLedgerRequest {
@@ -227,6 +231,7 @@ syncRouter.post("/journals", async (c) => {
         note: journal.note,
         public_expense_amount: journal.public_expense_amount,
         content_hash: journal.content_hash,
+        is_test: journal.is_test === true,
         synced_at,
       });
     } else if (existingHash !== journal.content_hash) {
@@ -246,6 +251,7 @@ syncRouter.post("/journals", async (c) => {
           note: journal.note,
           public_expense_amount: journal.public_expense_amount,
           content_hash: journal.content_hash,
+          is_test: journal.is_test === true,
           synced_at,
         },
       });
@@ -348,6 +354,7 @@ syncRouter.post("/ledger", async (c) => {
         total_income: ledger.total_income,
         total_expense: ledger.total_expense,
         journal_count: ledger.journal_count,
+        is_test: ledger.is_test === true,
         last_updated_at: now,
       })
       .eq("ledger_source_id", ledger.ledger_source_id)
@@ -359,7 +366,7 @@ syncRouter.post("/ledger", async (c) => {
       return c.json({ error: `Failed to update ledger: ${error.message}` }, 500);
     }
 
-    console.log(`[Sync] Ledger updated: ${ledger.ledger_source_id}`);
+    console.log(`[Sync] Ledger updated: ${ledger.ledger_source_id}${ledger.is_test ? " (test)" : ""}`);
     return c.json({ data, action: "updated" });
   } else {
     // 新規作成
@@ -374,6 +381,7 @@ syncRouter.post("/ledger", async (c) => {
         total_income: ledger.total_income,
         total_expense: ledger.total_expense,
         journal_count: ledger.journal_count,
+        is_test: ledger.is_test === true,
         last_updated_at: now,
         first_synced_at: now,
       })
@@ -385,7 +393,7 @@ syncRouter.post("/ledger", async (c) => {
       return c.json({ error: `Failed to create ledger: ${error.message}` }, 500);
     }
 
-    console.log(`[Sync] Ledger created: ${ledger.ledger_source_id}`);
+    console.log(`[Sync] Ledger created: ${ledger.ledger_source_id}${ledger.is_test ? " (test)" : ""}`);
     return c.json({ data, action: "created" }, 201);
   }
 });

@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS public_ledgers (
     total_expense INT DEFAULT 0,
     journal_count INT DEFAULT 0,
     ledger_source_id UUID NOT NULL UNIQUE,
+    is_test BOOLEAN DEFAULT FALSE,
     last_updated_at TIMESTAMPTZ NOT NULL,
     first_synced_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -184,6 +185,7 @@ CREATE TABLE IF NOT EXISTS public_journals (
     note TEXT,
     public_expense_amount INT,
     content_hash VARCHAR(64) NOT NULL,
+    is_test BOOLEAN DEFAULT FALSE,
     synced_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
