@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="200" viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Polimoney (��/+) -->
+  <g transform="translate(50, 30)">
+    <text x="30" y="10" font-size="12" fill="#666">Polimoney</text>
+    <!-- P + ��ï���� -->
+    <rect x="0" y="20" width="80" height="80" rx="16" fill="#7C3AED"/>
+    <text x="18" y="82" font-size="56" font-weight="bold" fill="white" font-family="system-ui">P</text>
+    <circle cx="58" cy="72" r="12" fill="#A78BFA"/>
+    <path d="M52 72 L56 76 L66 66" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- ƭ���� -->
+    <text x="0" y="130" font-size="20" font-weight="600" fill="#7C3AED" font-family="system-ui">Polimoney</text>
+  </g>
+
+  <!-- Ledger (�) -->
+  <g transform="translate(230, 30)">
+    <text x="30" y="10" font-size="12" fill="#666">Ledger</text>
+    <rect x="0" y="20" width="80" height="80" rx="16" fill="#10B981"/>
+    <text x="18" y="82" font-size="56" font-weight="bold" fill="white" font-family="system-ui">P</text>
+    <circle cx="58" cy="72" r="12" fill="#34D399"/>
+    <path d="M52 72 L56 76 L66 66" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- ƭ���� -->
+    <text x="0" y="130" font-size="20" font-weight="600" fill="#10B981" font-family="system-ui">Ledger</text>
+  </g>
+
+  <!-- Hub (�/���) -->
+  <g transform="translate(410, 30)">
+    <text x="35" y="10" font-size="12" fill="#666">Hub</text>
+    <rect x="0" y="20" width="80" height="80" rx="16" fill="#F59E0B"/>
+    <text x="18" y="82" font-size="56" font-weight="bold" fill="white" font-family="system-ui">P</text>
+    <circle cx="58" cy="72" r="12" fill="#FBBF24"/>
+    <path d="M52 72 L56 76 L66 66" stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- ƭ���� -->
+    <text x="0" y="130" font-size="20" font-weight="600" fill="#F59E0B" font-family="system-ui">Hub</text>
+  </g>
+</svg>
