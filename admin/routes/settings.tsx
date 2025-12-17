@@ -7,6 +7,7 @@ interface PageData {
     id: string;
     email: string;
     name: string | null;
+    dev_mode: boolean;
   } | null;
   success?: string;
   error?: string;
@@ -14,12 +15,29 @@ interface PageData {
 
 export const handler: Handlers<PageData, AuthState> = {
   async GET(_req, ctx) {
+    const apiBase = Deno.env.get("API_BASE_URL") || "http://localhost:3722";
+
+    // 現在のユーザー情報を API から取得
+    let devMode = false;
+    try {
+      const res = await fetch(`${apiBase}/api/admin/users/${ctx.state.user?.id}`, {
+        headers: { Authorization: `Bearer ${ctx.state.accessToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        devMode = data.data?.dev_mode ?? false;
+      }
+    } catch {
+      // エラー時はデフォルト値を使用
+    }
+
     return ctx.render({
       user: ctx.state.user
         ? {
             id: ctx.state.user.id,
             email: ctx.state.user.email || "",
             name: ctx.state.user.name || null,
+            dev_mode: devMode,
           }
         : null,
     });
@@ -27,9 +45,67 @@ export const handler: Handlers<PageData, AuthState> = {
 
   async POST(req, ctx) {
     const form = await req.formData();
-    const name = form.get("name")?.toString() || "";
+    const action = form.get("action")?.toString();
 
     const apiBase = Deno.env.get("API_BASE_URL") || "http://localhost:3722";
+
+    // dev_mode の切り替え
+    if (action === "toggle_dev_mode") {
+      const devMode = form.get("dev_mode")?.toString() === "true";
+
+      try {
+        const res = await fetch(`${apiBase}/api/admin/users/${ctx.state.user?.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${ctx.state.accessToken}`,
+          },
+          body: JSON.stringify({ dev_mode: devMode }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          return ctx.render({
+            user: ctx.state.user
+              ? {
+                  id: ctx.state.user.id,
+                  email: ctx.state.user.email || "",
+                  name: ctx.state.user.name || null,
+                  dev_mode: !devMode,
+                }
+              : null,
+            error: data.error || "更新に失敗しました",
+          });
+        }
+
+        return ctx.render({
+          user: ctx.state.user
+            ? {
+                id: ctx.state.user.id,
+                email: ctx.state.user.email || "",
+                name: ctx.state.user.name || null,
+                dev_mode: devMode,
+              }
+            : null,
+          success: devMode ? "開発モードを有効にしました" : "開発モードを無効にしました",
+        });
+      } catch (error) {
+        return ctx.render({
+          user: ctx.state.user
+            ? {
+                id: ctx.state.user.id,
+                email: ctx.state.user.email || "",
+                name: ctx.state.user.name || null,
+                dev_mode: !devMode,
+              }
+            : null,
+          error: error instanceof Error ? error.message : "エラーが発生しました",
+        });
+      }
+    }
+
+    // プロフィール更新
+    const name = form.get("name")?.toString() || "";
 
     try {
       const res = await fetch(`${apiBase}/api/admin/users/${ctx.state.user?.id}`, {
@@ -41,6 +117,20 @@ export const handler: Handlers<PageData, AuthState> = {
         body: JSON.stringify({ name }),
       });
 
+      // 現在の dev_mode を取得
+      let devMode = false;
+      try {
+        const userRes = await fetch(`${apiBase}/api/admin/users/${ctx.state.user?.id}`, {
+          headers: { Authorization: `Bearer ${ctx.state.accessToken}` },
+        });
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          devMode = userData.data?.dev_mode ?? false;
+        }
+      } catch {
+        // エラー時はデフォルト値
+      }
+
       if (!res.ok) {
         const data = await res.json();
         return ctx.render({
@@ -49,6 +139,7 @@ export const handler: Handlers<PageData, AuthState> = {
                 id: ctx.state.user.id,
                 email: ctx.state.user.email || "",
                 name: ctx.state.user.name || null,
+                dev_mode: devMode,
               }
             : null,
           error: data.error || "更新に失敗しました",
@@ -61,6 +152,7 @@ export const handler: Handlers<PageData, AuthState> = {
               id: ctx.state.user.id,
               email: ctx.state.user.email || "",
               name: name,
+              dev_mode: devMode,
             }
           : null,
         success: "プロフィールを更新しました",
@@ -72,6 +164,7 @@ export const handler: Handlers<PageData, AuthState> = {
               id: ctx.state.user.id,
               email: ctx.state.user.email || "",
               name: ctx.state.user.name || null,
+              dev_mode: false,
             }
           : null,
         error: error instanceof Error ? error.message : "エラーが発生しました",
@@ -166,6 +259,49 @@ export default function SettingsPage({ data }: PageProps<PageData>) {
                 ログアウト
               </a>
             </div>
+          </div>
+        </div>
+
+        {/* 開発モード */}
+        <div class="card bg-base-100 shadow">
+          <div class="card-body">
+            <h2 class="card-title">🔧 開発モード</h2>
+            <p class="text-sm text-base-content/70 mb-4">
+              有効にすると、テスト申請（<code class="font-mono text-xs">is_test=true</code>）が
+              Ledger 登録申請一覧に表示されます。
+            </p>
+            <form method="POST">
+              <input type="hidden" name="action" value="toggle_dev_mode" />
+              <input
+                type="hidden"
+                name="dev_mode"
+                value={data.user?.dev_mode ? "false" : "true"}
+              />
+              <div class="flex items-center gap-4">
+                <span class={data.user?.dev_mode ? "opacity-50" : "font-bold"}>
+                  オフ
+                </span>
+                <button
+                  type="submit"
+                  class={`toggle toggle-lg ${data.user?.dev_mode ? "toggle-warning" : ""}`}
+                  aria-label="開発モード切り替え"
+                >
+                  <input
+                    type="checkbox"
+                    checked={data.user?.dev_mode}
+                    class="sr-only"
+                  />
+                </button>
+                <span class={data.user?.dev_mode ? "font-bold" : "opacity-50"}>
+                  オン
+                </span>
+                {data.user?.dev_mode && (
+                  <span class="badge badge-warning gap-1">
+                    🧪 開発モード有効
+                  </span>
+                )}
+              </div>
+            </form>
           </div>
         </div>
 

@@ -25,8 +25,7 @@ interface RegistrationRequest {
 interface PageData {
   requests: RegistrationRequest[];
   status: string;
-  includeTest: boolean;
-  isProduction: boolean;
+  devMode: boolean;
   error?: string;
 }
 
@@ -53,15 +52,28 @@ export const handler: Handlers<PageData, AuthState> = {
   async GET(req, ctx) {
     const url = new URL(req.url);
     const status = url.searchParams.get("status") || "";
-    const includeTest = url.searchParams.get("include_test") === "true";
-    const isProduction = Deno.env.get("DENO_ENV") === "production";
 
     const apiBase = Deno.env.get("API_BASE_URL") || "http://localhost:3722";
+
+    // ユーザーの dev_mode を取得
+    let devMode = false;
+    try {
+      const userRes = await fetch(`${apiBase}/api/admin/users/${ctx.state.user?.id}`, {
+        headers: { Authorization: `Bearer ${ctx.state.accessToken}` },
+      });
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        devMode = userData.data?.dev_mode ?? false;
+      }
+    } catch {
+      // エラー時はデフォルト値
+    }
 
     try {
       const params = new URLSearchParams();
       if (status) params.set("status", status);
-      if (includeTest) params.set("include_test", "true");
+      // dev_mode が有効な場合はテスト申請を含める
+      if (devMode) params.set("include_test", "true");
       const queryString = params.toString();
       const queryParams = queryString ? `?${queryString}` : "";
 
@@ -76,15 +88,13 @@ export const handler: Handlers<PageData, AuthState> = {
       return ctx.render({
         requests: data.data || [],
         status,
-        includeTest,
-        isProduction,
+        devMode,
       });
     } catch (error) {
       return ctx.render({
         requests: [],
         status,
-        includeTest,
-        isProduction,
+        devMode,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -92,33 +102,24 @@ export const handler: Handlers<PageData, AuthState> = {
 };
 
 export default function RegistrationRequests({ data }: PageProps<PageData>) {
-  // 現在のフィルター状態を保持した URL を生成
-  const buildUrl = (newStatus: string, newIncludeTest?: boolean) => {
-    const params = new URLSearchParams();
-    if (newStatus) params.set("status", newStatus);
-    const includeTest = newIncludeTest ?? data.includeTest;
-    if (includeTest) params.set("include_test", "true");
-    const query = params.toString();
-    return `/registration-requests${query ? `?${query}` : ""}`;
-  };
-
   return (
     <Layout active="/registration-requests">
       <div class="space-y-6">
         <div class="flex items-center justify-between">
           <h1 class="text-3xl font-bold">👤 Ledger 登録申請</h1>
-          {!data.isProduction && (
+          {data.devMode && (
             <div class="badge badge-warning gap-1">
-              🔧 開発モード
+              🧪 開発モード（テスト申請を表示中）
             </div>
           )}
         </div>
 
-        {/* テスト申請表示オプション（開発モードの説明） */}
-        {!data.isProduction && (
+        {/* 開発モードの説明 */}
+        {data.devMode && (
           <div class="alert alert-info text-sm">
             <span>
-              ℹ️ 本番環境では <code class="font-mono">is_test=true</code> の申請は自動的に非表示になります。
+              ℹ️ 開発モードが有効です。テスト申請（<code class="font-mono">is_test=true</code>）も表示されています。
+              <a href="/settings" class="link ml-2">設定で切り替え →</a>
             </span>
           </div>
         )}
@@ -126,25 +127,25 @@ export default function RegistrationRequests({ data }: PageProps<PageData>) {
         {/* Filter tabs */}
         <div class="tabs tabs-boxed">
           <a
-            href={buildUrl("")}
+            href="/registration-requests"
             class={`tab ${data.status === "" ? "tab-active" : ""}`}
           >
             すべて
           </a>
           <a
-            href={buildUrl("pending")}
+            href="/registration-requests?status=pending"
             class={`tab ${data.status === "pending" ? "tab-active" : ""}`}
           >
             🟡 審査中
           </a>
           <a
-            href={buildUrl("approved")}
+            href="/registration-requests?status=approved"
             class={`tab ${data.status === "approved" ? "tab-active" : ""}`}
           >
             ✅ 承認済
           </a>
           <a
-            href={buildUrl("rejected")}
+            href="/registration-requests?status=rejected"
             class={`tab ${data.status === "rejected" ? "tab-active" : ""}`}
           >
             ❌ 却下

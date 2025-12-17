@@ -373,6 +373,7 @@ interface AdminUser {
   name: string | null;
   role: string;
   is_active: boolean;
+  dev_mode: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -480,6 +481,7 @@ adminRouter.put("/users/:id", async (c) => {
     name?: string;
     role?: string;
     is_active?: boolean;
+    dev_mode?: boolean;
   }>();
 
   const supabase = getServiceClient();
@@ -503,6 +505,10 @@ adminRouter.put("/users/:id", async (c) => {
 
   if (body.is_active !== undefined) {
     updates.is_active = body.is_active;
+  }
+
+  if (body.dev_mode !== undefined) {
+    updates.dev_mode = body.dev_mode;
   }
 
   const { data, error } = await supabase
