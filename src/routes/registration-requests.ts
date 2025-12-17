@@ -72,6 +72,7 @@ app.post("/", async (c) => {
         verification_doc_type: body.verification_doc_type || null,
         verification_doc_name: body.verification_doc_name || null,
         notes: body.notes || null,
+        is_test: body.is_test === true, // テスト申請フラグ
       })
       .select()
       .single();
@@ -102,10 +103,12 @@ app.post("/", async (c) => {
 app.get("/", async (c) => {
   try {
     const status = c.req.query("status");
+    const includeTest = c.req.query("include_test") === "true";
     const limit = parseInt(c.req.query("limit") || "50");
     const offset = parseInt(c.req.query("offset") || "0");
 
     const supabase = getSupabaseClient();
+    const isProduction = Deno.env.get("DENO_ENV") === "production";
 
     let query = supabase
       .from("registration_requests")
@@ -115,6 +118,11 @@ app.get("/", async (c) => {
 
     if (status) {
       query = query.eq("status", status);
+    }
+
+    // 本番環境ではテスト申請を除外（明示的に include_test=true でない限り）
+    if (isProduction && !includeTest) {
+      query = query.eq("is_test", false);
     }
 
     const { data, error, count } = await query;

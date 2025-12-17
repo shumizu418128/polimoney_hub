@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS registration_requests (
     -- メタデータ
     notes TEXT,                             -- 申請者からの備考
     admin_notes TEXT,                       -- 管理者メモ
+    is_test BOOLEAN DEFAULT FALSE,          -- テスト申請フラグ（開発モードからの申請）
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

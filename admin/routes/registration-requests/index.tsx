@@ -16,6 +16,7 @@ interface RegistrationRequest {
   rejection_reason: string | null;
   notes: string | null;
   admin_notes: string | null;
+  is_test: boolean;
   created_at: string;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -24,6 +25,8 @@ interface RegistrationRequest {
 interface PageData {
   requests: RegistrationRequest[];
   status: string;
+  includeTest: boolean;
+  isProduction: boolean;
   error?: string;
 }
 
@@ -50,11 +53,18 @@ export const handler: Handlers<PageData, AuthState> = {
   async GET(req, ctx) {
     const url = new URL(req.url);
     const status = url.searchParams.get("status") || "";
+    const includeTest = url.searchParams.get("include_test") === "true";
+    const isProduction = Deno.env.get("DENO_ENV") === "production";
 
     const apiBase = Deno.env.get("API_BASE_URL") || "http://localhost:3722";
 
     try {
-      const queryParams = status ? `?status=${status}` : "";
+      const params = new URLSearchParams();
+      if (status) params.set("status", status);
+      if (includeTest) params.set("include_test", "true");
+      const queryString = params.toString();
+      const queryParams = queryString ? `?${queryString}` : "";
+
       const res = await fetch(
         `${apiBase}/api/admin/registration-requests${queryParams}`,
         {
@@ -66,11 +76,15 @@ export const handler: Handlers<PageData, AuthState> = {
       return ctx.render({
         requests: data.data || [],
         status,
+        includeTest,
+        isProduction,
       });
     } catch (error) {
       return ctx.render({
         requests: [],
         status,
+        includeTest,
+        isProduction,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -78,35 +92,59 @@ export const handler: Handlers<PageData, AuthState> = {
 };
 
 export default function RegistrationRequests({ data }: PageProps<PageData>) {
+  // 現在のフィルター状態を保持した URL を生成
+  const buildUrl = (newStatus: string, newIncludeTest?: boolean) => {
+    const params = new URLSearchParams();
+    if (newStatus) params.set("status", newStatus);
+    const includeTest = newIncludeTest ?? data.includeTest;
+    if (includeTest) params.set("include_test", "true");
+    const query = params.toString();
+    return `/registration-requests${query ? `?${query}` : ""}`;
+  };
+
   return (
     <Layout active="/registration-requests">
       <div class="space-y-6">
         <div class="flex items-center justify-between">
           <h1 class="text-3xl font-bold">👤 Ledger 登録申請</h1>
+          {!data.isProduction && (
+            <div class="badge badge-warning gap-1">
+              🔧 開発モード
+            </div>
+          )}
         </div>
+
+        {/* テスト申請表示オプション（開発モードの説明） */}
+        {!data.isProduction && (
+          <div class="alert alert-info text-sm">
+            <span>
+              ℹ️ 本番環境では <code class="font-mono">is_test=true</code> の申請は自動的に非表示になります。
+            </span>
+          </div>
+        )}
 
         {/* Filter tabs */}
         <div class="tabs tabs-boxed">
           <a
-            href="/registration-requests"
+            href={buildUrl("")}
             class={`tab ${data.status === "" ? "tab-active" : ""}`}
           >
             すべて
           </a>
           <a
-            href="/registration-requests?status=pending"
+            href={buildUrl("pending")}
             class={`tab ${data.status === "pending" ? "tab-active" : ""}`}
           >
             🟡 審査中
           </a>
           <a
-            href="/registration-requests?status=approved"
+            href={buildUrl("approved")}
             class={`tab ${data.status === "approved" ? "tab-active" : ""}`}
           >
             ✅ 承認済
           </a>
           <a
-            href="/registration-requests?status=rejected"
+            href={buildUrl("rejected")}
             class={`tab ${data.status === "rejected" ? "tab-active" : ""}`}
           >
             ❌ 却下
@@ -137,6 +175,11 @@ export default function RegistrationRequests({ data }: PageProps<PageData>) {
                         >
                           {statusLabels[request.status]?.label || request.status}
                         </span>
+                        {request.is_test && (
+                          <span class="badge badge-outline badge-sm">
+                            🧪 テスト
+                          </span>
+                        )}
                       </h2>
                       <p class="text-sm opacity-70">
                         {request.email}
