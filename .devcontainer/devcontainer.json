@@ -40,4 +40,3 @@
   "forwardPorts": [3722, 3002, 5432],
   "postCreateCommand": "deno cache api/index.ts || true"
 }
-
