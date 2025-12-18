@@ -70,7 +70,7 @@
 
 #### 対応表（完全版）
 
-##### Hub DB (Azure) → Polimoney JSON マッピング
+##### Hub DB (Supabase) → Polimoney JSON マッピング
 
 | Polimoney JSON          | Hub public_journals        | Ledger ソース                       | Hub での導出方法                                    |
 | ----------------------- | -------------------------- | ----------------------------------- | --------------------------------------------------- |
@@ -175,6 +175,8 @@ const ACCOUNT_CODE_TO_CATEGORY: Record<string, string> = {
   // 支出（選挙運動費用）
   EXP_PERSONNEL_ELEC: "personnel",
   EXP_BUILDING_ELEC: "building",
+  EXP_BUILDING_ELEC_OFFICE: "building",  // 家屋費の子科目：選挙事務所費
+  EXP_BUILDING_ELEC_VENUE: "building",   // 家屋費の子科目：集合会場費等
   EXP_COMMUNICATION_ELEC: "communication",
   EXP_TRANSPORT_ELEC: "transport",
   EXP_PRINTING_ELEC: "printing",

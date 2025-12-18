@@ -267,10 +267,10 @@ curl -H "X-API-Key: your-api-key" \
 {
   "data": [
     {
-      "id": "HR-13-01-20241027",
+      "id": "550e8400-e29b-41d4-a716-446655440000",
       "name": "第50回衆議院議員総選挙 東京1区",
       "type": "HR",
-      "area_code": "13-01",
+      "district_id": "660e8400-e29b-41d4-a716-446655440001",
       "election_date": "2024-10-27",
       "created_at": "2024-01-01T00:00:00.000Z",
       "updated_at": "2024-01-01T00:00:00.000Z"
@@ -281,7 +281,7 @@ curl -H "X-API-Key: your-api-key" \
 
 ### POST /api/v1/elections
 
-新しい選挙 ID を発行します。
+新しい選挙を登録します。
 
 **リクエスト:**
 
@@ -289,7 +289,7 @@ curl -H "X-API-Key: your-api-key" \
 {
   "name": "第50回衆議院議員総選挙 東京1区",
   "type": "HR",
-  "area_code": "13-01",
+  "district_id": "660e8400-e29b-41d4-a716-446655440001",
   "election_date": "2024-10-27"
 }
 ```
@@ -299,10 +299,10 @@ curl -H "X-API-Key: your-api-key" \
 ```json
 {
   "data": {
-    "id": "HR-13-01-20241027",
+    "id": "550e8400-e29b-41d4-a716-446655440000",
     "name": "第50回衆議院議員総選挙 東京1区",
     "type": "HR",
-    "area_code": "13-01",
+    "district_id": "660e8400-e29b-41d4-a716-446655440001",
     "election_date": "2024-10-27",
     "created_at": "2024-01-01T00:00:00.000Z",
     "updated_at": "2024-01-01T00:00:00.000Z"
@@ -314,8 +314,7 @@ curl -H "X-API-Key: your-api-key" \
 
 ```json
 {
-  "error": "Election with this ID already exists",
-  "id": "HR-13-01-20241027"
+  "error": "Election already exists"
 }
 ```
 
@@ -323,55 +322,22 @@ curl -H "X-API-Key: your-api-key" \
 
 ## 選挙 ID の形式
 
-選挙 ID は以下の形式で自動生成されます：
+選挙 ID は **UUID** 形式で自動生成されます。
 
 ```
-{type}-{area_code}-{date}
+550e8400-e29b-41d4-a716-446655440000
 ```
-
-### 構成要素
-
-| 要素      | 説明              | 例                 |
-| --------- | ----------------- | ------------------ |
-| type      | 選挙タイプ        | HR, HC, PG, CM, GM |
-| area_code | 選挙区コード      | 13-01 (東京 1 区)  |
-| date      | 投票日 (YYYYMMDD) | 20241027           |
 
 ### 選挙タイプ
 
-| コード | 英語名                     | 日本語名         |
-| ------ | -------------------------- | ---------------- |
-| HR     | House of Representatives   | 衆議院議員選挙   |
-| HC     | House of Councillors       | 参議院議員選挙   |
-| PG     | Prefectural Governor       | 都道府県知事選挙 |
-| CM     | City/Town/Village Mayor    | 市区町村長選挙   |
-| GM     | General/Municipal Assembly | 議会議員選挙     |
-
-### 選挙区コード
-
-形式: `{都道府県コード(2桁)}-{選挙区番号(2桁)}`
-
-**例:**
-
-| コード | 説明             |
-| ------ | ---------------- |
-| 13-01  | 東京 1 区        |
-| 13-25  | 東京 25 区       |
-| 27-01  | 大阪 1 区        |
-| 00-00  | 比例代表（全国） |
-
-### 特殊な選挙区（参議院合同選挙区）
-
-| コード | 説明                 |
-| ------ | -------------------- |
-| 31-32  | 鳥取・島根合同選挙区 |
-| 36-39  | 徳島・高知合同選挙区 |
-
-**合同選挙区の選挙 ID 例:**
-
-```
-HC-31-32-20250720  # 参院選 鳥取・島根合同選挙区 2025年7月20日
-```
+| コード | 英語名                     | 日本語名             |
+| ------ | -------------------------- | -------------------- |
+| HR     | House of Representatives   | 衆議院議員選挙       |
+| HC     | House of Councillors       | 参議院議員選挙       |
+| PG     | Prefectural Governor       | 都道府県知事選挙     |
+| PA     | Prefectural Assembly       | 都道府県議会議員選挙 |
+| CM     | City/Town/Village Mayor    | 市区町村長選挙       |
+| GM     | General/Municipal Assembly | 市区町村議会議員選挙 |
 
 ---
 

@@ -47,6 +47,7 @@ interface AccountCode {
   is_public_subsidy_eligible: boolean;
   display_order: number;
   polimoney_category: string;
+  parent_code?: string;
   description?: string;
 }
 
@@ -127,6 +128,8 @@ const accountCodes: AccountCode[] = [
   // ============================================
   { code: "EXP_PERSONNEL_ELEC", name: "人件費", type: "expense", report_category: "選挙運動費用", ledger_type: "election", is_public_subsidy_eligible: false, display_order: 550, polimoney_category: "人件費", description: "事務員報酬、車上運動員報酬、労務者報酬等" },
   { code: "EXP_BUILDING_ELEC", name: "家屋費", type: "expense", report_category: "選挙運動費用", ledger_type: "election", is_public_subsidy_eligible: false, display_order: 551, polimoney_category: "事務所費", description: "選挙事務所費（賃借料・設営費等）、集合会場費等" },
+  { code: "EXP_BUILDING_ELEC_OFFICE", name: "選挙事務所費", type: "expense", report_category: "選挙運動費用", ledger_type: "election", is_public_subsidy_eligible: false, display_order: 5511, polimoney_category: "事務所費", parent_code: "EXP_BUILDING_ELEC", description: "選挙事務所の賃借料・設営費等" },
+  { code: "EXP_BUILDING_ELEC_VENUE", name: "集合会場費等", type: "expense", report_category: "選挙運動費用", ledger_type: "election", is_public_subsidy_eligible: false, display_order: 5512, polimoney_category: "事務所費", parent_code: "EXP_BUILDING_ELEC", description: "演説会場費、その他の集合会場費" },
   { code: "EXP_COMMUNICATION_ELEC", name: "通信費", type: "expense", report_category: "選挙運動費用", ledger_type: "election", is_public_subsidy_eligible: false, display_order: 552, polimoney_category: "通信費", description: "電話料、切手代、郵便料等" },
   { code: "EXP_TRANSPORT_ELEC", name: "交通費", type: "expense", report_category: "選挙運動費用", ledger_type: "election", is_public_subsidy_eligible: false, display_order: 553, polimoney_category: "交通費", description: "運動員への交通費実費弁償、鉄道賃、車賃等" },
   { code: "EXP_PRINTING_ELEC", name: "印刷費", type: "expense", report_category: "選挙運動費用", ledger_type: "election", is_public_subsidy_eligible: true, display_order: 554, polimoney_category: "広報費", description: "はがき、ビラ、ポスター等の印刷代" },
