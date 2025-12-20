@@ -13,6 +13,8 @@ interface PoliticianVerification {
   status: string;
   request_type: string;
   previous_domain: string | null;
+  verification_method: string;
+  is_lg_domain: boolean;
   created_at: string;
 }
 
@@ -26,6 +28,8 @@ interface OrganizationManagerVerification {
   status: string;
   request_type: string;
   previous_domain: string | null;
+  verification_method: string;
+  is_lg_domain: boolean;
   created_at: string;
 }
 
@@ -42,6 +46,7 @@ const statusLabels: Record<string, { label: string; class: string }> = {
   pending: { label: "保留中", class: "badge-warning" },
   email_sent: { label: "メール送信済", class: "badge-info" },
   email_verified: { label: "承認待ち", class: "badge-accent" },
+  dns_verified: { label: "承認待ち", class: "badge-accent" },
   approved: { label: "承認済", class: "badge-success" },
   rejected: { label: "却下", class: "badge-error" },
 };
@@ -49,6 +54,11 @@ const statusLabels: Record<string, { label: string; class: string }> = {
 const requestTypeLabels: Record<string, { label: string; class: string }> = {
   new: { label: "新規", class: "badge-outline" },
   domain_change: { label: "ドメイン変更", class: "badge-warning" },
+};
+
+const verificationMethodLabels: Record<string, { label: string; class: string }> = {
+  email: { label: "メール認証", class: "badge-info badge-outline" },
+  dns_txt: { label: "DNS TXT", class: "badge-secondary badge-outline" },
 };
 
 export const handler: Handlers<PageData, AuthState> = {
@@ -115,8 +125,13 @@ export const handler: Handlers<PageData, AuthState> = {
 export default function VerificationsPage({ data }: PageProps<PageData>) {
   const { politicianVerifications, organizationManagerVerifications, tab, status, devMode, error } = data;
 
-  const pendingPoliticianCount = politicianVerifications.filter((v) => v.status === "email_verified").length;
-  const pendingOrgCount = organizationManagerVerifications.filter((v) => v.status === "email_verified").length;
+  // 承認待ち = email_verified または dns_verified
+  const pendingPoliticianCount = politicianVerifications.filter(
+    (v) => v.status === "email_verified" || v.status === "dns_verified"
+  ).length;
+  const pendingOrgCount = organizationManagerVerifications.filter(
+    (v) => v.status === "email_verified" || v.status === "dns_verified"
+  ).length;
 
   return (
     <Layout active="/verifications" devMode={devMode}>
@@ -169,8 +184,14 @@ export default function VerificationsPage({ data }: PageProps<PageData>) {
             すべて
           </a>
           <a
-            href={`/verifications?tab=${tab}&status=email_verified`}
-            class={`tab ${status === "email_verified" ? "tab-active" : ""}`}
+            href={`/verifications?tab=${tab}&status=pending`}
+            class={`tab ${status === "pending" ? "tab-active" : ""}`}
+          >
+            🟠 認証待ち
+          </a>
+          <a
+            href={`/verifications?tab=${tab}&status=verified`}
+            class={`tab ${status === "verified" ? "tab-active" : ""}`}
           >
             🟡 承認待ち
           </a>
@@ -202,13 +223,19 @@ export default function VerificationsPage({ data }: PageProps<PageData>) {
                     <div class="card-body">
                       <div class="flex items-start justify-between">
                         <div>
-                          <h2 class="card-title">
+                          <h2 class="card-title flex-wrap gap-1">
                             {v.politician_name}
+                            {v.is_lg_domain && (
+                              <span class="badge badge-primary">lg.jp</span>
+                            )}
                             <span class={`badge ${statusLabels[v.status]?.class || "badge-ghost"}`}>
                               {statusLabels[v.status]?.label || v.status}
                             </span>
                             <span class={`badge ${requestTypeLabels[v.request_type]?.class || "badge-outline"}`}>
                               {requestTypeLabels[v.request_type]?.label || v.request_type}
+                            </span>
+                            <span class={`badge ${verificationMethodLabels[v.verification_method]?.class || "badge-ghost"}`}>
+                              {verificationMethodLabels[v.verification_method]?.label || v.verification_method}
                             </span>
                           </h2>
                           <p class="text-sm opacity-70">
@@ -231,7 +258,7 @@ export default function VerificationsPage({ data }: PageProps<PageData>) {
                         </div>
                       </div>
 
-                      {v.status === "email_verified" && (
+                      {(v.status === "email_verified" || v.status === "dns_verified") && (
                         <div class="card-actions justify-end">
                           <a
                             href={`/verifications/politician/${v.id}`}
@@ -263,13 +290,19 @@ export default function VerificationsPage({ data }: PageProps<PageData>) {
                     <div class="card-body">
                       <div class="flex items-start justify-between">
                         <div>
-                          <h2 class="card-title">
+                          <h2 class="card-title flex-wrap gap-1">
                             {v.organization_name}
+                            {v.is_lg_domain && (
+                              <span class="badge badge-primary">lg.jp</span>
+                            )}
                             <span class={`badge ${statusLabels[v.status]?.class || "badge-ghost"}`}>
                               {statusLabels[v.status]?.label || v.status}
                             </span>
                             <span class={`badge ${requestTypeLabels[v.request_type]?.class || "badge-outline"}`}>
                               {requestTypeLabels[v.request_type]?.label || v.request_type}
+                            </span>
+                            <span class={`badge ${verificationMethodLabels[v.verification_method]?.class || "badge-ghost"}`}>
+                              {verificationMethodLabels[v.verification_method]?.label || v.verification_method}
                             </span>
                           </h2>
                           <p class="text-sm opacity-70">
@@ -289,7 +322,7 @@ export default function VerificationsPage({ data }: PageProps<PageData>) {
                         </div>
                       </div>
 
-                      {v.status === "email_verified" && (
+                      {(v.status === "email_verified" || v.status === "dns_verified") && (
                         <div class="card-actions justify-end">
                           <a
                             href={`/verifications/organization/${v.id}`}

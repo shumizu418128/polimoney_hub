@@ -56,6 +56,7 @@ export interface Politician {
   id: string;
   name: string;
   name_kana: string | null;
+  is_lg_verified: boolean;
 }
 
 /** Hub の elections テーブルのレコード（JOIN済み） */
@@ -79,6 +80,8 @@ export interface PolimoneyPolitician {
   id: string;
   name: string;
   name_kana: string | null;
+  /** lg.jpドメインで認証されたか（自治体ドメイン認証） */
+  is_lg_verified: boolean;
 }
 
 /** Polimoney JSON: 選挙情報 */
@@ -309,6 +312,7 @@ export function createPolimoneyResponse(
         id: politician.id,
         name: politician.name,
         name_kana: politician.name_kana,
+        is_lg_verified: politician.is_lg_verified ?? false,
       },
       election: transformElection(election),
       summary,

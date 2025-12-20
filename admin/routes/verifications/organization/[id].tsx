@@ -2,6 +2,12 @@ import { Handlers, PageProps } from "$fresh/server.ts";
 import Layout from "../../../components/Layout.tsx";
 import { AuthState } from "../../_middleware.ts";
 
+interface PoliticalFundReportInfo {
+  organization_name: string;
+  representative_name: string;
+  registration_authority: string;
+}
+
 interface OrganizationManagerVerification {
   id: string;
   ledger_user_id: string;
@@ -14,6 +20,10 @@ interface OrganizationManagerVerification {
   status: string;
   request_type: string;
   previous_domain: string | null;
+  verification_method: string;
+  is_lg_domain: boolean;
+  dns_txt_token: string | null;
+  political_fund_report_info: PoliticalFundReportInfo | null;
   rejection_reason: string | null;
   created_at: string;
   reviewed_at: string | null;
@@ -29,6 +39,7 @@ const statusLabels: Record<string, { label: string; class: string }> = {
   pending: { label: "保留中", class: "badge-warning" },
   email_sent: { label: "メール送信済", class: "badge-info" },
   email_verified: { label: "承認待ち", class: "badge-accent" },
+  dns_verified: { label: "承認待ち", class: "badge-accent" },
   approved: { label: "承認済", class: "badge-success" },
   rejected: { label: "却下", class: "badge-error" },
 };
@@ -36,6 +47,11 @@ const statusLabels: Record<string, { label: string; class: string }> = {
 const requestTypeLabels: Record<string, { label: string; class: string }> = {
   new: { label: "新規認証", class: "badge-outline" },
   domain_change: { label: "ドメイン変更", class: "badge-warning" },
+};
+
+const verificationMethodLabels: Record<string, { label: string; class: string }> = {
+  email: { label: "メール認証", class: "badge-info badge-outline" },
+  dns_txt: { label: "DNS TXT", class: "badge-secondary badge-outline" },
 };
 
 const organizationTypeLabels: Record<string, string> = {
@@ -104,7 +120,7 @@ export const handler: Handlers<PageData, AuthState> = {
 
         return new Response(null, {
           status: 303,
-          headers: { Location: "/verifications?tab=organization&status=email_verified" },
+          headers: { Location: "/verifications?tab=organization&status=verified" },
         });
       }
 
@@ -146,7 +162,7 @@ export const handler: Handlers<PageData, AuthState> = {
 
         return new Response(null, {
           status: 303,
-          headers: { Location: "/verifications?tab=organization&status=email_verified" },
+          headers: { Location: "/verifications?tab=organization&status=verified" },
         });
       }
 
@@ -176,6 +192,8 @@ export default function OrganizationManagerVerificationDetail({ data }: PageProp
     );
   }
 
+  const canApprove = verification.status === "email_verified" || verification.status === "dns_verified";
+
   return (
     <Layout active="/verifications">
       <div class="space-y-6">
@@ -195,13 +213,21 @@ export default function OrganizationManagerVerificationDetail({ data }: PageProp
         <div class="card bg-base-100 shadow">
           <div class="card-body">
             <div class="flex items-start justify-between">
-              <h2 class="card-title text-2xl">{verification.organization_name}</h2>
-              <div class="flex gap-2">
+              <h2 class="card-title text-2xl flex-wrap gap-2">
+                {verification.organization_name}
+                {verification.is_lg_domain && (
+                  <span class="badge badge-primary badge-lg">lg.jp</span>
+                )}
+              </h2>
+              <div class="flex gap-2 flex-wrap">
                 <span class={`badge ${statusLabels[verification.status]?.class || "badge-ghost"}`}>
                   {statusLabels[verification.status]?.label || verification.status}
                 </span>
                 <span class={`badge ${requestTypeLabels[verification.request_type]?.class || "badge-outline"}`}>
                   {requestTypeLabels[verification.request_type]?.label || verification.request_type}
+                </span>
+                <span class={`badge ${verificationMethodLabels[verification.verification_method]?.class || "badge-ghost"}`}>
+                  {verificationMethodLabels[verification.verification_method]?.label || verification.verification_method}
                 </span>
               </div>
             </div>
@@ -259,9 +285,9 @@ export default function OrganizationManagerVerificationDetail({ data }: PageProp
             )}
 
             <div class="mt-4">
-              <p class="text-sm opacity-70">Ledger ユーザー ID</p>
+              <p class="text-sm opacity-70">Ledger ユーザー</p>
               <code class="text-sm bg-base-200 px-2 py-1 rounded">
-                {verification.ledger_user_id}
+                {verification.ledger_user_email}
               </code>
             </div>
 
@@ -276,7 +302,30 @@ export default function OrganizationManagerVerificationDetail({ data }: PageProp
           </div>
         </div>
 
-        {verification.status === "email_verified" && (
+        {/* 政治資金収支報告書情報 */}
+        {verification.political_fund_report_info && (
+          <div class="card bg-base-100 shadow">
+            <div class="card-body">
+              <h3 class="card-title text-lg">📑 政治資金収支報告書情報</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p class="text-sm opacity-70">団体名</p>
+                  <p class="font-medium">{verification.political_fund_report_info.organization_name}</p>
+                </div>
+                <div>
+                  <p class="text-sm opacity-70">代表者名</p>
+                  <p class="font-medium">{verification.political_fund_report_info.representative_name}</p>
+                </div>
+                <div>
+                  <p class="text-sm opacity-70">届出先</p>
+                  <p class="font-medium">{verification.political_fund_report_info.registration_authority}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {canApprove && (
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Approve Form */}
             <div class="card bg-success/10 border-2 border-success">
@@ -289,6 +338,11 @@ export default function OrganizationManagerVerificationDetail({ data }: PageProp
                     ? "この申請を承認すると、ユーザーが既存の政治団体の管理者として登録されます。"
                     : "この申請を承認すると、新しい政治団体が作成され、ユーザーがその管理者として登録されます。"}
                 </p>
+                {verification.is_lg_domain && (
+                  <div class="alert alert-info mt-2">
+                    <span>🏛️ lg.jpドメインからの申請のため、自治体の公式メールアドレスです。</span>
+                  </div>
+                )}
                 <form method="POST">
                   <input type="hidden" name="action" value="approve" />
                   <div class="card-actions justify-end mt-4">

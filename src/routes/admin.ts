@@ -879,8 +879,9 @@ adminRouter.put("/politician-verifications/:id/approve", async (c) => {
     return c.json({ error: "Politician verification not found" }, 404);
   }
 
-  if (verification.status !== "email_verified") {
-    return c.json({ error: "メール認証が完了していない申請は承認できません" }, 400);
+  // メール認証またはDNS TXT認証が完了している必要がある
+  if (verification.status !== "email_verified" && verification.status !== "dns_verified") {
+    return c.json({ error: "認証が完了していない申請は承認できません" }, 400);
   }
 
   const now = new Date().toISOString();
@@ -899,6 +900,7 @@ adminRouter.put("/politician-verifications/:id/approve", async (c) => {
       is_verified: true,
       verified_at: now,
       verified_domain: emailDomain,
+      is_lg_verified: verification.is_lg_domain || false,
       updated_at: now,
     };
 
@@ -923,13 +925,14 @@ adminRouter.put("/politician-verifications/:id/approve", async (c) => {
     const { data: newPolitician, error: createError } = await supabase
       .from("politicians")
       .insert({
-        name: verification.name,
+        name: verification.politician_name,
         ledger_user_id: verification.ledger_user_id,
         official_url: verification.official_url,
         party: verification.party,
         is_verified: true,
         verified_at: now,
         verified_domain: emailDomain,
+        is_lg_verified: verification.is_lg_domain || false,
       })
       .select()
       .single();
@@ -946,7 +949,7 @@ adminRouter.put("/politician-verifications/:id/approve", async (c) => {
   const { data, error } = await supabase
     .from("politician_verifications")
     .update({
-      politician_id: politicianId,
+      approved_politician_id: politicianId,
       status: "approved",
       reviewed_by: body.reviewed_by || null,
       reviewed_at: now,
@@ -1089,8 +1092,9 @@ adminRouter.put("/organization-manager-verifications/:id/approve", async (c) => 
     return c.json({ error: "Organization manager verification not found" }, 404);
   }
 
-  if (verification.status !== "email_verified") {
-    return c.json({ error: "メール認証が完了していない申請は承認できません" }, 400);
+  // メール認証またはDNS TXT認証が完了している必要がある
+  if (verification.status !== "email_verified" && verification.status !== "dns_verified") {
+    return c.json({ error: "認証が完了していない申請は承認できません" }, 400);
   }
 
   const now = new Date().toISOString();
@@ -1109,6 +1113,7 @@ adminRouter.put("/organization-manager-verifications/:id/approve", async (c) => 
         official_url: null,
         is_verified: true,
         verified_at: now,
+        is_lg_verified: verification.is_lg_domain || false,
       })
       .select()
       .single();
@@ -1125,6 +1130,7 @@ adminRouter.put("/organization-manager-verifications/:id/approve", async (c) => 
     const updateData: Record<string, unknown> = {
       is_verified: true,
       verified_at: now,
+      is_lg_verified: verification.is_lg_domain || false,
       updated_at: now,
     };
 

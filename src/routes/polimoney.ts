@@ -90,7 +90,7 @@ polimoneyRouter.get("/elections/:electionId/journals", async (c) => {
     // 3. 政治家情報を取得
     const { data: politician, error: politicianError } = await supabase
       .from("politicians")
-      .select("id, name, name_kana")
+      .select("id, name, name_kana, is_lg_verified")
       .eq("id", ledger.politician_id)
       .single();
 
@@ -174,7 +174,7 @@ polimoneyRouter.get("/ledgers/:ledgerId/journals", async (c) => {
     // 3. 政治家情報を取得
     const { data: politician, error: politicianError } = await supabase
       .from("politicians")
-      .select("id, name, name_kana")
+      .select("id, name, name_kana, is_lg_verified")
       .eq("id", ledger.politician_id)
       .single();
 
@@ -291,7 +291,7 @@ polimoneyRouter.get("/elections/:electionId/candidates", async (c) => {
         total_income,
         total_expense,
         journal_count,
-        politicians:politician_id(id, name, name_kana)
+        politicians:politician_id(id, name, name_kana, is_lg_verified)
       `)
       .eq("election_id", electionId);
 
@@ -311,6 +311,7 @@ polimoneyRouter.get("/elections/:electionId/candidates", async (c) => {
             id: l.politicians.id,
             name: l.politicians.name,
             name_kana: l.politicians.name_kana,
+            is_lg_verified: l.politicians.is_lg_verified ?? false,
           }
         : null,
       summary: {

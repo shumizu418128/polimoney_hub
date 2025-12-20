@@ -3,8 +3,24 @@ import { getServiceClient } from "../lib/supabase.ts";
 
 export const politicianVerificationsRouter = new Hono();
 
+// 立候補届出情報
+interface CandidateRegistrationInfo {
+  election_name: string; // 選挙名
+  district: string; // 選挙区
+  candidate_name: string; // 氏名
+  registration_date: string; // 届出年月日
+}
+
+// 政治資金収支報告書情報
+interface PoliticalFundReportInfo {
+  organization_name: string; // 団体名
+  representative_name: string; // 代表者名
+  registration_authority: string; // 届出先（総務省/都道府県選管）
+}
+
 interface PoliticianVerificationRequest {
   ledger_user_id: string;
+  ledger_user_email: string;
   name: string;
   official_email: string;
   official_url?: string;
@@ -13,15 +29,37 @@ interface PoliticianVerificationRequest {
   // ドメイン変更用
   request_type?: "new" | "domain_change";
   previous_domain?: string;
+  // 認証用追加情報（どちらか必須）
+  candidate_registration_info?: CandidateRegistrationInfo;
+  political_fund_report_info?: PoliticalFundReportInfo;
+}
+
+// lg.jpドメインかどうかを判定
+function isLgJpDomain(domain: string): boolean {
+  const lowerDomain = domain.toLowerCase();
+  return lowerDomain === "lg.jp" || lowerDomain.endsWith(".lg.jp");
+}
+
+// UUID v4を生成
+function generateUUID(): string {
+  return crypto.randomUUID();
 }
 
 // 認証申請作成
 politicianVerificationsRouter.post("/", async (c) => {
   const body = await c.req.json<PoliticianVerificationRequest>();
 
-  if (!body.ledger_user_id || !body.name || !body.official_email) {
+  if (!body.ledger_user_id || !body.ledger_user_email || !body.name || !body.official_email) {
     return c.json(
-      { error: "ledger_user_id, name, and official_email are required" },
+      { error: "ledger_user_id, ledger_user_email, name, and official_email are required" },
+      400,
+    );
+  }
+
+  // 立候補届出情報または政治資金収支報告書情報のどちらかは必須
+  if (!body.candidate_registration_info && !body.political_fund_report_info) {
+    return c.json(
+      { error: "立候補届出情報または政治資金収支報告書情報のいずれかを入力してください。" },
       400,
     );
   }
@@ -32,25 +70,35 @@ politicianVerificationsRouter.post("/", async (c) => {
     return c.json({ error: "Invalid email address" }, 400);
   }
 
-  // フリーメールドメインをブロック（簡易チェック）
-  const blockedDomains = [
-    "gmail.com",
-    "yahoo.co.jp",
-    "yahoo.com",
-    "hotmail.com",
-    "outlook.com",
-    "icloud.com",
-    "docomo.ne.jp",
-    "softbank.ne.jp",
-    "ezweb.ne.jp",
-    "au.com",
-  ];
-  if (blockedDomains.includes(emailDomain.toLowerCase())) {
-    return c.json(
-      { error: "フリーメールアドレスは使用できません。公式ドメインのメールアドレスを入力してください。" },
-      400,
-    );
+  // lg.jpドメインかどうかを判定
+  const isLgDomain = isLgJpDomain(emailDomain);
+  
+  // lg.jp以外の場合、フリーメールドメインをブロック
+  if (!isLgDomain) {
+    const blockedDomains = [
+      "gmail.com",
+      "yahoo.co.jp",
+      "yahoo.com",
+      "hotmail.com",
+      "outlook.com",
+      "icloud.com",
+      "docomo.ne.jp",
+      "softbank.ne.jp",
+      "ezweb.ne.jp",
+      "au.com",
+    ];
+    if (blockedDomains.includes(emailDomain.toLowerCase())) {
+      return c.json(
+        { error: "フリーメールアドレスは使用できません。公式ドメインのメールアドレスを入力してください。" },
+        400,
+      );
+    }
   }
+
+  // 認証方式を決定
+  const verificationMethod = isLgDomain ? "email" : "dns_txt";
+  // DNS TXT認証の場合はトークンを生成
+  const dnsTxtToken = verificationMethod === "dns_txt" ? generateUUID() : null;
 
   const supabase = getServiceClient();
 
@@ -59,7 +107,7 @@ politicianVerificationsRouter.post("/", async (c) => {
     .from("politician_verifications")
     .select("*", { count: "exact", head: true })
     .eq("ledger_user_id", body.ledger_user_id)
-    .in("status", ["pending", "email_sent", "email_verified"]);
+    .in("status", ["pending", "email_sent", "email_verified", "dns_verified"]);
 
   if (countError) {
     return c.json({ error: countError.message }, 500);
@@ -99,6 +147,7 @@ politicianVerificationsRouter.post("/", async (c) => {
     .from("politician_verifications")
     .insert({
       ledger_user_id: body.ledger_user_id,
+      ledger_user_email: body.ledger_user_email,
       politician_id: body.politician_id || null,
       politician_name: body.name,
       official_email: body.official_email,
@@ -107,6 +156,12 @@ politicianVerificationsRouter.post("/", async (c) => {
       status: "pending",
       request_type: body.request_type || "new",
       previous_domain: body.previous_domain || null,
+      // 新規追加フィールド
+      verification_method: verificationMethod,
+      is_lg_domain: isLgDomain,
+      dns_txt_token: dnsTxtToken,
+      candidate_registration_info: body.candidate_registration_info || null,
+      political_fund_report_info: body.political_fund_report_info || null,
     })
     .select()
     .single();
@@ -118,7 +173,7 @@ politicianVerificationsRouter.post("/", async (c) => {
   return c.json({ data }, 201);
 });
 
-// メール認証コード送信
+// メール認証コード送信（lg.jpドメインのみ）
 politicianVerificationsRouter.post("/:id/send-verification", async (c) => {
   const id = c.req.param("id");
 
@@ -138,6 +193,14 @@ politicianVerificationsRouter.post("/:id/send-verification", async (c) => {
     return c.json({ error: fetchError.message }, 500);
   }
 
+  // メール認証はlg.jpドメインのみ許可
+  if (verification.verification_method !== "email") {
+    return c.json(
+      { error: "この申請はDNS TXT認証が必要です。メール認証は使用できません。" },
+      400,
+    );
+  }
+
   if (verification.status !== "pending" && verification.status !== "email_sent") {
     return c.json(
       { error: "この申請はすでに処理されています" },
@@ -152,8 +215,8 @@ politicianVerificationsRouter.post("/:id/send-verification", async (c) => {
   const { error: updateError } = await supabase
     .from("politician_verifications")
     .update({
-      email_verification_code: verificationCode,
-      email_verification_sent_at: new Date().toISOString(),
+      verification_code: verificationCode,
+      verification_code_sent_at: new Date().toISOString(),
       status: "email_sent",
       updated_at: new Date().toISOString(),
     })
@@ -174,7 +237,7 @@ politicianVerificationsRouter.post("/:id/send-verification", async (c) => {
   });
 });
 
-// メール認証確認
+// メール認証確認（lg.jpドメインのみ）
 politicianVerificationsRouter.post("/:id/verify-email", async (c) => {
   const id = c.req.param("id");
   const { code } = await c.req.json<{ code: string }>();
@@ -207,7 +270,7 @@ politicianVerificationsRouter.post("/:id/verify-email", async (c) => {
   }
 
   // コードの有効期限チェック（30分）
-  const sentAt = new Date(verification.email_verification_sent_at);
+  const sentAt = new Date(verification.verification_code_sent_at);
   const now = new Date();
   const diffMinutes = (now.getTime() - sentAt.getTime()) / (1000 * 60);
   if (diffMinutes > 30) {
@@ -218,7 +281,7 @@ politicianVerificationsRouter.post("/:id/verify-email", async (c) => {
   }
 
   // コードの検証
-  if (verification.email_verification_code !== code) {
+  if (verification.verification_code !== code) {
     return c.json(
       { error: "認証コードが正しくありません" },
       400,
@@ -229,7 +292,7 @@ politicianVerificationsRouter.post("/:id/verify-email", async (c) => {
   const { error: updateError } = await supabase
     .from("politician_verifications")
     .update({
-      email_verified: true,
+      verification_code_verified_at: new Date().toISOString(),
       status: "email_verified",
       updated_at: new Date().toISOString(),
     })
@@ -242,6 +305,102 @@ politicianVerificationsRouter.post("/:id/verify-email", async (c) => {
   return c.json({
     message: "メール認証が完了しました。管理者の承認をお待ちください。",
   });
+});
+
+// DNS TXT認証検証
+politicianVerificationsRouter.post("/:id/verify-dns", async (c) => {
+  const id = c.req.param("id");
+
+  const supabase = getServiceClient();
+
+  // 申請を取得
+  const { data: verification, error: fetchError } = await supabase
+    .from("politician_verifications")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (fetchError) {
+    if (fetchError.code === "PGRST116") {
+      return c.json({ error: "Verification request not found" }, 404);
+    }
+    return c.json({ error: fetchError.message }, 500);
+  }
+
+  // DNS TXT認証のみ許可
+  if (verification.verification_method !== "dns_txt") {
+    return c.json(
+      { error: "この申請はメール認証が必要です。DNS TXT認証は使用できません。" },
+      400,
+    );
+  }
+
+  if (verification.status !== "pending") {
+    return c.json(
+      { error: "この申請はすでに処理されています" },
+      400,
+    );
+  }
+
+  if (!verification.dns_txt_token) {
+    return c.json({ error: "DNS TXTトークンが設定されていません" }, 500);
+  }
+
+  // DNS TXTレコードを検証
+  const domain = verification.official_domain;
+  const expectedValue = `polimoney-verify=${verification.dns_txt_token}`;
+
+  try {
+    // Deno.resolveDnsを使用してTXTレコードを取得
+    const txtRecords = await Deno.resolveDns(domain, "TXT");
+    
+    // TXTレコードの中から期待する値を探す
+    let found = false;
+    for (const records of txtRecords) {
+      // TXTレコードは文字列の配列として返される
+      const recordValue = Array.isArray(records) ? records.join("") : records;
+      if (recordValue === expectedValue) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      return c.json({
+        error: "DNS TXTレコードが見つかりませんでした。設定を確認してください。",
+        expected: {
+          domain: domain,
+          type: "TXT",
+          value: expectedValue,
+        },
+      }, 400);
+    }
+
+    // 申請を更新
+    const { error: updateError } = await supabase
+      .from("politician_verifications")
+      .update({
+        dns_txt_verified: true,
+        dns_txt_verified_at: new Date().toISOString(),
+        status: "dns_verified",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (updateError) {
+      return c.json({ error: updateError.message }, 500);
+    }
+
+    return c.json({
+      message: "DNS TXT認証が完了しました。管理者の承認をお待ちください。",
+    });
+  } catch (error) {
+    console.error("DNS lookup error:", error);
+    return c.json({
+      error: "DNSの検索に失敗しました。ドメイン名を確認してください。",
+      details: error instanceof Error ? error.message : "Unknown error",
+    }, 400);
+  }
 });
 
 // 申請一覧取得（Ledgerユーザー用）
