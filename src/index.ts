@@ -30,6 +30,7 @@ import { politicianVerificationsRouter } from "./routes/politician-verifications
 import { organizationManagerVerificationsRouter } from "./routes/organization-manager-verifications.ts";
 import { publicRouter } from "./routes/public.ts";
 import { impersonationReportsRouter } from "./routes/impersonation-reports.ts";
+import { uploadsRouter } from "./routes/uploads.ts";
 
 const app = new Hono();
 
@@ -90,6 +91,8 @@ api.route("/registration-requests", registrationRequestsRouter);
 // v2: 認証関連API
 api.route("/politician-verifications", politicianVerificationsRouter);
 api.route("/organization-manager-verifications", organizationManagerVerificationsRouter);
+// v2.1: 画像アップロード
+api.route("/uploads", uploadsRouter);
 
 // Admin routes (管理者認証必要) - /api/v1 の前にマウント
 const admin = new Hono();

@@ -231,6 +231,30 @@ const organizationRequests = [
 ];
 
 // ============================================
+// ダミーデータ: 政治団体管理者（テストユーザー用）
+// Ledger テストユーザー ID: 00000000-0000-0000-0000-000000000001
+// ============================================
+
+const organizationManagers = [
+  {
+    id: "mmmm1111-1111-1111-1111-111111111111",
+    ledger_user_id: "00000000-0000-0000-0000-000000000001",  // Ledger テストユーザー
+    organization_id: "aaaa1111-1111-1111-1111-111111111111", // 山田太郎後援会
+    verified_at: new Date().toISOString(),
+    verified_domain: "example.lg.jp",
+    is_active: true,
+  },
+  {
+    id: "mmmm1111-2222-2222-2222-222222222222",
+    ledger_user_id: "00000000-0000-0000-0000-000000000001",  // Ledger テストユーザー
+    organization_id: "aaaa1111-2222-2222-2222-222222222222", // 山田太郎を応援する会
+    verified_at: new Date().toISOString(),
+    verified_domain: "example.lg.jp",
+    is_active: true,
+  },
+];
+
+// ============================================
 // シード関数
 // ============================================
 
@@ -346,6 +370,18 @@ async function seedOrganizationRequests() {
   console.log(`   ✅ organization_requests: ${organizationRequests.length} 件`);
 }
 
+async function seedOrganizationManagers() {
+  console.log("👔 Seeding organization_managers...");
+  const { error } = await supabase
+    .from("organization_managers")
+    .upsert(organizationManagers, { onConflict: "id", ignoreDuplicates: true });
+
+  if (error) throw error;
+
+  const { count } = await supabase.from("organization_managers").select("*", { count: "exact", head: true });
+  console.log(`   ✅ organization_managers: ${count} 件`);
+}
+
 // ============================================
 // メイン
 // ============================================
@@ -362,6 +398,7 @@ async function seedAll() {
   await seedPublicJournals();
   await seedElectionRequests();
   await seedOrganizationRequests();
+  await seedOrganizationManagers();  // テストユーザー用政治団体管理者
 
   console.log("\n✅ All done!\n");
 }
@@ -377,6 +414,7 @@ async function seedDummyOnly() {
   await seedPublicJournals();
   await seedElectionRequests();
   await seedOrganizationRequests();
+  await seedOrganizationManagers();  // テストユーザー用政治団体管理者
 
   console.log("\n✅ Done!\n");
 }
