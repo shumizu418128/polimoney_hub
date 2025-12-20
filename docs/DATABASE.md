@@ -761,13 +761,28 @@ TEST_USER_ID = "00000000-0000-0000-0000-000000000001"
 2. **`is_test = true` で識別** - クエリでフィルタリング可能
 3. **Ledger 同期時に自動設定** - `syncJournals`/`syncLedger` API 呼び出し時に自動的にフラグが設定される
 
-### 公開 API でのフィルタリング
+### API キーによるフィルタリング
 
-公開 API（`/api/public/*`）では、デフォルトで `is_test = false` のデータのみ返却されます。
+Hub は API キーに基づいて `is_test` フィルタリングを行います：
+
+| API キー       | `isTestMode` | 返却データ         |
+| -------------- | ------------ | ------------------ |
+| `API_KEY_PROD` | `false`      | `is_test = false`  |
+| `API_KEY_DEV`  | `true`       | `is_test = true`   |
+
+```typescript
+// Hub middleware/auth.ts
+if (apiKey === apiKeyDev) {
+  c.set("isTestMode", true);  // テストデータを返す
+} else if (apiKey === apiKeyProd) {
+  c.set("isTestMode", false); // 本番データを返す
+}
+```
 
 ```sql
--- 公開 API でのクエリ例
-SELECT * FROM politicians WHERE is_verified = true AND is_test = false;
+-- 各 API でのクエリ例
+SELECT * FROM politicians 
+WHERE COALESCE(is_test, false) = $isTestMode;
 ```
 
 ### テストデータの初期化

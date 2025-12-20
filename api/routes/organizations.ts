@@ -15,12 +15,13 @@ interface Organization {
 // 政治団体一覧取得
 organizationsRouter.get("/", async (c) => {
   const politicianId = c.req.query("politician_id");
+  const isTestMode = c.get("isTestMode") as boolean;
 
-  let sql = "SELECT * FROM organizations";
-  const args: unknown[] = [];
+  let sql = "SELECT * FROM organizations WHERE COALESCE(is_test, false) = $1";
+  const args: unknown[] = [isTestMode];
 
   if (politicianId) {
-    sql += " WHERE politician_id = $1";
+    sql += " AND politician_id = $2";
     args.push(politicianId);
   }
 
@@ -33,9 +34,11 @@ organizationsRouter.get("/", async (c) => {
 // 政治団体取得
 organizationsRouter.get("/:id", async (c) => {
   const id = c.req.param("id");
+  const isTestMode = c.get("isTestMode") as boolean;
+
   const organization = await queryOne<Organization>(
-    "SELECT * FROM organizations WHERE id = $1",
-    [id]
+    "SELECT * FROM organizations WHERE id = $1 AND COALESCE(is_test, false) = $2",
+    [id, isTestMode]
   );
 
   if (!organization) {
@@ -52,16 +55,17 @@ organizationsRouter.post("/", async (c) => {
     type: string;
     politician_id?: string;
   }>();
+  const isTestMode = c.get("isTestMode") as boolean;
 
   if (!body.name || !body.type) {
     return c.json({ error: "name and type are required" }, 400);
   }
 
   const result = await query<Organization>(
-    `INSERT INTO organizations (name, type, politician_id) 
-     VALUES ($1, $2, $3) 
+    `INSERT INTO organizations (name, type, politician_id, is_test) 
+     VALUES ($1, $2, $3, $4) 
      RETURNING *`,
-    [body.name, body.type, body.politician_id || null]
+    [body.name, body.type, body.politician_id || null, isTestMode]
   );
 
   return c.json({ data: result[0] }, 201);
@@ -70,13 +74,14 @@ organizationsRouter.post("/", async (c) => {
 // 管理している政治団体一覧取得（ledger_user_id で検索）
 organizationsRouter.get("/managed", async (c) => {
   const ledgerUserId = c.req.query("ledger_user_id");
+  const isTestMode = c.get("isTestMode") as boolean;
 
   if (!ledgerUserId) {
     return c.json({ error: "ledger_user_id is required" }, 400);
   }
 
   // organization_managers テーブルから管理団体を取得
-  // is_test フラグは考慮しない（テストユーザーもテストデータを見れるようにする）
+  // API キーに応じて is_test フィルタリング
   const managedOrganizations = await query<{
     id: string;
     name: string;
@@ -107,8 +112,9 @@ organizationsRouter.get("/managed", async (c) => {
      INNER JOIN organization_managers om ON o.id = om.organization_id
      WHERE om.ledger_user_id = $1 
        AND om.is_active = true
+       AND COALESCE(o.is_test, false) = $2
      ORDER BY o.name`,
-    [ledgerUserId]
+    [ledgerUserId, isTestMode]
   );
 
   return c.json({ data: managedOrganizations });
@@ -117,6 +123,7 @@ organizationsRouter.get("/managed", async (c) => {
 // 政治団体更新
 organizationsRouter.put("/:id", async (c) => {
   const id = c.req.param("id");
+  const isTestMode = c.get("isTestMode") as boolean;
   const body = await c.req.json<{
     name?: string;
     type?: string;
@@ -155,7 +162,7 @@ organizationsRouter.put("/:id", async (c) => {
          sns_tiktok = COALESCE($16, sns_tiktok),
          logo_url = COALESCE($17, logo_url),
          updated_at = NOW()
-     WHERE id = $1
+     WHERE id = $1 AND COALESCE(is_test, false) = $18
      RETURNING *`,
     [
       id,
@@ -175,6 +182,7 @@ organizationsRouter.put("/:id", async (c) => {
       body.sns_facebook,
       body.sns_tiktok,
       body.logo_url,
+      isTestMode,
     ]
   );
 

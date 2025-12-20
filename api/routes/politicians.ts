@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import { query, queryOne } from "../db/client.ts";
-import { createTableHelper } from "../db/schema.ts";
 
 export const politiciansRouter = new Hono();
 
@@ -8,17 +7,27 @@ interface Politician {
   id: string;
   name: string;
   name_kana: string | null;
+  ledger_user_id: string | null;
+  official_url: string | null;
+  party: string | null;
+  photo_url: string | null;
+  is_verified: boolean;
+  verified_at: Date | null;
+  verified_domain: string | null;
+  is_test: boolean;
   created_at: Date;
   updated_at: Date;
 }
 
 // 政治家一覧取得
 politiciansRouter.get("/", async (c) => {
-  const apiKey = c.req.header("X-API-Key");
-  const tables = createTableHelper(apiKey);
+  const isTestMode = c.get("isTestMode") as boolean;
 
   const politicians = await query<Politician>(
-    `SELECT * FROM ${tables.politicians} ORDER BY created_at DESC`
+    `SELECT * FROM politicians 
+     WHERE COALESCE(is_test, false) = $1 
+     ORDER BY created_at DESC`,
+    [isTestMode]
   );
   return c.json({ data: politicians });
 });
@@ -26,12 +35,11 @@ politiciansRouter.get("/", async (c) => {
 // 政治家取得
 politiciansRouter.get("/:id", async (c) => {
   const id = c.req.param("id");
-  const apiKey = c.req.header("X-API-Key");
-  const tables = createTableHelper(apiKey);
+  const isTestMode = c.get("isTestMode") as boolean;
 
   const politician = await queryOne<Politician>(
-    `SELECT * FROM ${tables.politicians} WHERE id = @id`,
-    { id }
+    `SELECT * FROM politicians WHERE id = $1 AND COALESCE(is_test, false) = $2`,
+    [id, isTestMode]
   );
 
   if (!politician) {
@@ -44,18 +52,17 @@ politiciansRouter.get("/:id", async (c) => {
 // 政治家 ID 発行
 politiciansRouter.post("/", async (c) => {
   const body = await c.req.json<{ name: string; name_kana?: string }>();
-  const apiKey = c.req.header("X-API-Key");
-  const tables = createTableHelper(apiKey);
+  const isTestMode = c.get("isTestMode") as boolean;
 
   if (!body.name) {
     return c.json({ error: "name is required" }, 400);
   }
 
   const result = await query<Politician>(
-    `INSERT INTO ${tables.politicians} (name, name_kana) 
-     OUTPUT INSERTED.*
-     VALUES (@name, @name_kana)`,
-    { name: body.name, name_kana: body.name_kana || null }
+    `INSERT INTO politicians (name, name_kana, is_test) 
+     VALUES ($1, $2, $3) 
+     RETURNING *`,
+    [body.name, body.name_kana || null, isTestMode]
   );
 
   return c.json({ data: result[0] }, 201);
@@ -64,18 +71,34 @@ politiciansRouter.post("/", async (c) => {
 // 政治家更新
 politiciansRouter.put("/:id", async (c) => {
   const id = c.req.param("id");
-  const body = await c.req.json<{ name?: string; name_kana?: string }>();
-  const apiKey = c.req.header("X-API-Key");
-  const tables = createTableHelper(apiKey);
+  const body = await c.req.json<{
+    name?: string;
+    name_kana?: string;
+    official_url?: string;
+    party?: string;
+    photo_url?: string;
+  }>();
+  const isTestMode = c.get("isTestMode") as boolean;
 
   const result = await query<Politician>(
-    `UPDATE ${tables.politicians} 
-     SET name = COALESCE(@name, name),
-         name_kana = COALESCE(@name_kana, name_kana),
-         updated_at = GETUTCDATE()
-     OUTPUT INSERTED.*
-     WHERE id = @id`,
-    { id, name: body.name || null, name_kana: body.name_kana || null }
+    `UPDATE politicians 
+     SET name = COALESCE($2, name),
+         name_kana = COALESCE($3, name_kana),
+         official_url = COALESCE($4, official_url),
+         party = COALESCE($5, party),
+         photo_url = COALESCE($6, photo_url),
+         updated_at = NOW()
+     WHERE id = $1 AND COALESCE(is_test, false) = $7
+     RETURNING *`,
+    [
+      id,
+      body.name,
+      body.name_kana,
+      body.official_url,
+      body.party,
+      body.photo_url,
+      isTestMode,
+    ]
   );
 
   if (result.length === 0) {
