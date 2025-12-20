@@ -10,6 +10,7 @@ export default function Layout({ children, active, devMode }: LayoutProps) {
   const menuItems = [
     { href: "/", label: "ダッシュボード", icon: "📊" },
     { href: "/registration-requests", label: "Ledger登録申請", icon: "👤" },
+    { href: "/verifications", label: "認証申請管理", icon: "✅" },
     { href: "/election-requests", label: "選挙リクエスト", icon: "🗳️" },
     { href: "/organization-requests", label: "政治団体リクエスト", icon: "🏛️" },
     { href: "/elections", label: "選挙マスタ", icon: "📅" },

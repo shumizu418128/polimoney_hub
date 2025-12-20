@@ -10,6 +10,9 @@ interface PoliticianVerificationRequest {
   official_url?: string;
   party?: string;
   politician_id?: string;
+  // ドメイン変更用
+  request_type?: "new" | "domain_change";
+  previous_domain?: string;
 }
 
 // 認証申請作成
@@ -97,11 +100,13 @@ politicianVerificationsRouter.post("/", async (c) => {
     .insert({
       ledger_user_id: body.ledger_user_id,
       politician_id: body.politician_id || null,
-      name: body.name,
+      politician_name: body.name,
       official_email: body.official_email,
-      official_url: body.official_url || null,
+      official_domain: emailDomain,
       party: body.party || null,
       status: "pending",
+      request_type: body.request_type || "new",
+      previous_domain: body.previous_domain || null,
     })
     .select()
     .single();

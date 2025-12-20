@@ -9,6 +9,9 @@ interface OrganizationManagerVerificationRequest {
   organization_name: string;
   official_email: string;
   role_in_organization?: string;
+  // ドメイン変更用
+  request_type?: "new" | "domain_change";
+  previous_domain?: string;
 }
 
 // 認証申請作成
@@ -98,8 +101,10 @@ organizationManagerVerificationsRouter.post("/", async (c) => {
       organization_id: body.organization_id || null,
       organization_name: body.organization_name,
       official_email: body.official_email,
-      role_in_organization: body.role_in_organization || null,
+      official_domain: emailDomain,
       status: "pending",
+      request_type: body.request_type || "new",
+      previous_domain: body.previous_domain || null,
     })
     .select()
     .single();
