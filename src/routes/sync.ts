@@ -7,7 +7,7 @@
 import { Hono } from "hono";
 import { getServiceClient } from "../lib/supabase.ts";
 
-const syncRouter = new Hono();
+export const syncRouter = new Hono();
 
 // ============================================
 // 型定義
@@ -533,4 +533,3 @@ syncRouter.post("/change-log", async (c) => {
   return c.json({ data }, 201);
 });
 
-export { syncRouter };

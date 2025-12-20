@@ -7,13 +7,13 @@
 import { Hono } from "hono";
 import { getServiceClient } from "../lib/supabase.ts";
 
-const app = new Hono();
+export const registrationRequestsRouter = new Hono();
 
 // ============================================
 // POST /registration-requests
 // 新規登録申請を受け付け
 // ============================================
-app.post("/", async (c) => {
+registrationRequestsRouter.post("/", async (c) => {
   try {
     const body = await c.req.json();
 
@@ -100,7 +100,7 @@ app.post("/", async (c) => {
 // GET /registration-requests
 // 登録申請一覧（管理者用）
 // ============================================
-app.get("/", async (c) => {
+registrationRequestsRouter.get("/", async (c) => {
   try {
     const status = c.req.query("status");
     const testOnly = c.req.query("test_only") === "true"; // テスト申請のみ
@@ -154,7 +154,7 @@ app.get("/", async (c) => {
 // GET /registration-requests/:id
 // 登録申請詳細
 // ============================================
-app.get("/:id", async (c) => {
+registrationRequestsRouter.get("/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const supabase = getServiceClient();
@@ -183,7 +183,7 @@ app.get("/:id", async (c) => {
 // PUT /registration-requests/:id/approve
 // 登録申請を承認（管理者用）
 // ============================================
-app.put("/:id/approve", async (c) => {
+registrationRequestsRouter.put("/:id/approve", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json().catch(() => ({}));
@@ -243,7 +243,7 @@ app.put("/:id/approve", async (c) => {
 // PUT /registration-requests/:id/reject
 // 登録申請を却下（管理者用）
 // ============================================
-app.put("/:id/reject", async (c) => {
+registrationRequestsRouter.put("/:id/reject", async (c) => {
   try {
     const id = c.req.param("id");
     const body = await c.req.json();
@@ -305,7 +305,7 @@ app.put("/:id/reject", async (c) => {
 // GET /registration-requests/check/:email
 // メールアドレスで申請状態を確認（Ledger 用）
 // ============================================
-app.get("/check/:email", async (c) => {
+registrationRequestsRouter.get("/check/:email", async (c) => {
   try {
     const email = decodeURIComponent(c.req.param("email"));
     const supabase = getServiceClient();
@@ -337,4 +337,3 @@ app.get("/check/:email", async (c) => {
   }
 });
 
-export default app;

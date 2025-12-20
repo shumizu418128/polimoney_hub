@@ -25,7 +25,7 @@ import { unlockRequestsRouter } from "./routes/unlock-requests.ts";
 import { masterRouter } from "./routes/master.ts";
 import { authRouter } from "./routes/auth.ts";
 import { polimoneyRouter } from "./routes/polimoney.ts";
-import registrationRequestsRouter from "./routes/registration-requests.ts";
+import { registrationRequestsRouter } from "./routes/registration-requests.ts";
 import { politicianVerificationsRouter } from "./routes/politician-verifications.ts";
 import { organizationManagerVerificationsRouter } from "./routes/organization-manager-verifications.ts";
 import { publicRouter } from "./routes/public.ts";

@@ -8,7 +8,7 @@
 import { Hono } from "hono";
 import { getServiceClient } from "../lib/supabase.ts";
 
-const unlockRequestsRouter = new Hono();
+export const unlockRequestsRouter = new Hono();
 
 // ============================================
 // 型定義
@@ -211,4 +211,3 @@ unlockRequestsRouter.get("/check/:ledger_id", async (c) => {
   });
 });
 
-export { unlockRequestsRouter };

@@ -7,7 +7,7 @@
 import { Hono } from "hono";
 import { getServiceClient } from "../lib/supabase.ts";
 
-const masterRouter = new Hono();
+export const masterRouter = new Hono();
 
 // ============================================
 // 勘定科目マスタ
@@ -282,4 +282,3 @@ masterRouter.get("/prefectures", async (c) => {
   return c.json({ data: prefectures });
 });
 
-export { masterRouter };
