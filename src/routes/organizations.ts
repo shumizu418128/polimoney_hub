@@ -35,6 +35,86 @@ organizationsRouter.get("/", async (c) => {
   return c.json({ data });
 });
 
+// 【v2.1 更新】Ledgerユーザーが管理している政治団体一覧を取得（詳細情報含む）
+// 注意: /:id より前に定義する必要がある（/managed が /:id にマッチしないように）
+organizationsRouter.get("/managed", async (c) => {
+  const ledgerUserId = c.req.query("ledger_user_id");
+  const isTestMode = c.get("isTestMode") as boolean;
+
+  if (!ledgerUserId) {
+    return c.json({ error: "ledger_user_id is required" }, 400);
+  }
+
+  const supabase = getServiceClient();
+
+  // organization_managers テーブルから、このユーザーが管理している政治団体を取得
+  // is_test フィルタリング: DEV キー → is_test=true、PROD キー → is_test=false/null
+  let query = supabase
+    .from("organization_managers")
+    .select(`
+      organization_id,
+      verified_at,
+      verified_domain,
+      is_test,
+      organizations (
+        id,
+        name,
+        type,
+        official_url,
+        registration_authority,
+        established_date,
+        office_address,
+        representative_name,
+        accountant_name,
+        contact_email,
+        description,
+        sns_x,
+        sns_instagram,
+        sns_facebook,
+        sns_tiktok,
+        logo_url,
+        is_verified,
+        is_active,
+        is_test,
+        created_at,
+        updated_at
+      )
+    `)
+    .eq("ledger_user_id", ledgerUserId)
+    .eq("is_active", true);
+
+  // is_test フィルタリング
+  if (isTestMode) {
+    query = query.eq("is_test", true);
+  } else {
+    query = query.or("is_test.is.null,is_test.eq.false");
+  }
+
+  const { data: managers, error: managerError } = await query;
+
+  if (managerError) {
+    console.error("Failed to fetch managed organizations:", managerError);
+    return c.json({ error: managerError.message }, 500);
+  }
+
+  // レスポンスを整形（organizations の is_test もフィルタ）
+  // deno-lint-ignore no-explicit-any
+  const data = managers?.filter((m: any) => {
+    const orgIsTest = m.organizations?.is_test;
+    if (isTestMode) {
+      return orgIsTest === true;
+    } else {
+      return orgIsTest === null || orgIsTest === false;
+    }
+  }).map((m: any) => ({
+    ...m.organizations,
+    manager_verified_at: m.verified_at,
+    manager_verified_domain: m.verified_domain,
+  })) || [];
+
+  return c.json({ data });
+});
+
 // 政治団体取得
 organizationsRouter.get("/:id", async (c) => {
   const id = c.req.param("id");
@@ -153,85 +233,6 @@ organizationsRouter.put("/:id", async (c) => {
     }
     return c.json({ error: error.message }, 500);
   }
-
-  return c.json({ data });
-});
-
-// 【v2.1 更新】Ledgerユーザーが管理している政治団体一覧を取得（詳細情報含む）
-organizationsRouter.get("/managed", async (c) => {
-  const ledgerUserId = c.req.query("ledger_user_id");
-  const isTestMode = c.get("isTestMode") as boolean;
-
-  if (!ledgerUserId) {
-    return c.json({ error: "ledger_user_id is required" }, 400);
-  }
-
-  const supabase = getServiceClient();
-
-  // organization_managers テーブルから、このユーザーが管理している政治団体を取得
-  // is_test フィルタリング: DEV キー → is_test=true、PROD キー → is_test=false/null
-  let query = supabase
-    .from("organization_managers")
-    .select(`
-      organization_id,
-      verified_at,
-      verified_domain,
-      is_test,
-      organizations (
-        id,
-        name,
-        type,
-        official_url,
-        registration_authority,
-        established_date,
-        office_address,
-        representative_name,
-        accountant_name,
-        contact_email,
-        description,
-        sns_x,
-        sns_instagram,
-        sns_facebook,
-        sns_tiktok,
-        logo_url,
-        is_verified,
-        is_active,
-        is_test,
-        created_at,
-        updated_at
-      )
-    `)
-    .eq("ledger_user_id", ledgerUserId)
-    .eq("is_active", true);
-
-  // is_test フィルタリング
-  if (isTestMode) {
-    query = query.eq("is_test", true);
-  } else {
-    query = query.or("is_test.is.null,is_test.eq.false");
-  }
-
-  const { data: managers, error: managerError } = await query;
-
-  if (managerError) {
-    console.error("Failed to fetch managed organizations:", managerError);
-    return c.json({ error: managerError.message }, 500);
-  }
-
-  // レスポンスを整形（organizations の is_test もフィルタ）
-  // deno-lint-ignore no-explicit-any
-  const data = managers?.filter((m: any) => {
-    const orgIsTest = m.organizations?.is_test;
-    if (isTestMode) {
-      return orgIsTest === true;
-    } else {
-      return orgIsTest === null || orgIsTest === false;
-    }
-  }).map((m: any) => ({
-    ...m.organizations,
-    manager_verified_at: m.verified_at,
-    manager_verified_domain: m.verified_domain,
-  })) || [];
 
   return c.json({ data });
 });
