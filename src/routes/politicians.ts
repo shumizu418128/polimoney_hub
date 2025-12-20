@@ -72,10 +72,16 @@ politiciansRouter.post("/", async (c) => {
   return c.json({ data }, 201);
 });
 
-// 政治家更新
+// 政治家更新（認証済み政治家の情報編集）
 politiciansRouter.put("/:id", async (c) => {
   const id = c.req.param("id");
-  const body = await c.req.json<{ name?: string; name_kana?: string }>();
+  const body = await c.req.json<{
+    name?: string;
+    name_kana?: string;
+    official_url?: string | null;
+    party?: string | null;
+    photo_url?: string | null;
+  }>();
 
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
@@ -83,6 +89,9 @@ politiciansRouter.put("/:id", async (c) => {
 
   if (body.name !== undefined) updateData.name = body.name;
   if (body.name_kana !== undefined) updateData.name_kana = body.name_kana;
+  if (body.official_url !== undefined) updateData.official_url = body.official_url;
+  if (body.party !== undefined) updateData.party = body.party;
+  if (body.photo_url !== undefined) updateData.photo_url = body.photo_url;
 
   const supabase = getServiceClient();
   const { data, error } = await supabase
