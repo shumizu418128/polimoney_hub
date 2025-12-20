@@ -86,7 +86,7 @@ organizationsRouter.post("/", async (c) => {
   return c.json({ data }, 201);
 });
 
-// 政治団体更新（v2.1: 詳細情報・SNS対応）
+// 政治団体更新（v2.1: 詳細情報・SNS対応, v2.2: ロゴ追加）
 organizationsRouter.put("/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json<{
@@ -107,6 +107,8 @@ organizationsRouter.put("/:id", async (c) => {
     sns_instagram?: string | null;
     sns_facebook?: string | null;
     sns_tiktok?: string | null;
+    // ロゴ（v2.2）
+    logo_url?: string | null;
   }>();
 
   const updateData: Record<string, unknown> = {
@@ -133,6 +135,9 @@ organizationsRouter.put("/:id", async (c) => {
   if (body.sns_instagram !== undefined) updateData.sns_instagram = body.sns_instagram;
   if (body.sns_facebook !== undefined) updateData.sns_facebook = body.sns_facebook;
   if (body.sns_tiktok !== undefined) updateData.sns_tiktok = body.sns_tiktok;
+  
+  // ロゴ
+  if (body.logo_url !== undefined) updateData.logo_url = body.logo_url;
 
   const supabase = getServiceClient();
   const { data, error } = await supabase
@@ -185,6 +190,7 @@ organizationsRouter.get("/managed", async (c) => {
         sns_instagram,
         sns_facebook,
         sns_tiktok,
+        logo_url,
         is_verified,
         is_active,
         created_at,

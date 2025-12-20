@@ -116,8 +116,15 @@ uploadsRouter.post("/image", async (c) => {
         return c.json({ error: "政治家情報の更新に失敗しました" }, 500);
       }
     } else if (type === "organization_logo") {
-      // 将来の実装用
-      // organizations テーブルに logo_url カラムを追加した場合
+      const { error: updateError } = await supabase
+        .from("organizations")
+        .update({ logo_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq("id", entityId);
+
+      if (updateError) {
+        console.error("Failed to update organization:", updateError);
+        return c.json({ error: "政治団体情報の更新に失敗しました" }, 500);
+      }
     } else if (type === "party_logo") {
       // 将来の実装用
       // parties テーブルを作成した場合、または politicians テーブルに party_logo_url を追加
