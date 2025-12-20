@@ -81,7 +81,7 @@ organizationsRouter.get("/managed", async (c) => {
   }
 
   // organization_managers テーブルから管理団体を取得
-  // API キーに応じて is_test フィルタリング
+  // API キーに応じて is_test フィルタリング（両テーブルでフィルタ）
   const managedOrganizations = await query<{
     id: string;
     name: string;
@@ -113,6 +113,7 @@ organizationsRouter.get("/managed", async (c) => {
      WHERE om.ledger_user_id = $1 
        AND om.is_active = true
        AND COALESCE(o.is_test, false) = $2
+       AND COALESCE(om.is_test, false) = $2
      ORDER BY o.name`,
     [ledgerUserId, isTestMode]
   );

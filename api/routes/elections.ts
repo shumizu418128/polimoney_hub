@@ -34,10 +34,11 @@ function generateElectionId(
 electionsRouter.get("/", async (c) => {
   const type = c.req.query("type");
   const year = c.req.query("year");
+  const isTestMode = c.get("isTestMode") as boolean;
 
-  let sql = "SELECT * FROM elections WHERE 1=1";
-  const args: unknown[] = [];
-  let argIndex = 1;
+  let sql = "SELECT * FROM elections WHERE COALESCE(is_test, false) = $1";
+  const args: unknown[] = [isTestMode];
+  let argIndex = 2;
 
   if (type) {
     sql += ` AND type = $${argIndex++}`;
@@ -58,9 +59,11 @@ electionsRouter.get("/", async (c) => {
 // 選挙取得
 electionsRouter.get("/:id", async (c) => {
   const id = c.req.param("id");
+  const isTestMode = c.get("isTestMode") as boolean;
+
   const election = await queryOne<Election>(
-    "SELECT * FROM elections WHERE id = $1",
-    [id]
+    "SELECT * FROM elections WHERE id = $1 AND COALESCE(is_test, false) = $2",
+    [id, isTestMode]
   );
 
   if (!election) {
@@ -108,11 +111,13 @@ electionsRouter.post("/", async (c) => {
     return c.json({ error: "Election with this ID already exists", id }, 409);
   }
 
+  const isTestMode = c.get("isTestMode") as boolean;
+
   const result = await query<Election>(
-    `INSERT INTO elections (id, name, type, area_code, election_date) 
-     VALUES ($1, $2, $3, $4, $5) 
+    `INSERT INTO elections (id, name, type, area_code, election_date, is_test) 
+     VALUES ($1, $2, $3, $4, $5, $6) 
      RETURNING *`,
-    [id, body.name, body.type, body.area_code, electionDate]
+    [id, body.name, body.type, body.area_code, electionDate, isTestMode]
   );
 
   return c.json({ data: result[0] }, 201);
@@ -122,6 +127,7 @@ electionsRouter.post("/", async (c) => {
 electionsRouter.put("/:id", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json<{ name?: string }>();
+  const isTestMode = c.get("isTestMode") as boolean;
 
   // 選挙 ID は不変（type, area_code, date から生成されるため）
   // 更新可能なのは name のみ
@@ -130,9 +136,9 @@ electionsRouter.put("/:id", async (c) => {
     `UPDATE elections 
      SET name = COALESCE($2, name),
          updated_at = NOW()
-     WHERE id = $1
+     WHERE id = $1 AND COALESCE(is_test, false) = $3
      RETURNING *`,
-    [id, body.name]
+    [id, body.name, isTestMode]
   );
 
   if (result.length === 0) {

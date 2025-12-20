@@ -765,15 +765,15 @@ TEST_USER_ID = "00000000-0000-0000-0000-000000000001"
 
 Hub は API キーに基づいて `is_test` フィルタリングを行います：
 
-| API キー       | `isTestMode` | 返却データ         |
-| -------------- | ------------ | ------------------ |
-| `API_KEY_PROD` | `false`      | `is_test = false`  |
-| `API_KEY_DEV`  | `true`       | `is_test = true`   |
+| API キー       | `isTestMode` | 返却データ        |
+| -------------- | ------------ | ----------------- |
+| `API_KEY_PROD` | `false`      | `is_test = false` |
+| `API_KEY_DEV`  | `true`       | `is_test = true`  |
 
 ```typescript
 // Hub middleware/auth.ts
 if (apiKey === apiKeyDev) {
-  c.set("isTestMode", true);  // テストデータを返す
+  c.set("isTestMode", true); // テストデータを返す
 } else if (apiKey === apiKeyProd) {
   c.set("isTestMode", false); // 本番データを返す
 }
@@ -781,7 +781,7 @@ if (apiKey === apiKeyDev) {
 
 ```sql
 -- 各 API でのクエリ例
-SELECT * FROM politicians 
+SELECT * FROM politicians
 WHERE COALESCE(is_test, false) = $isTestMode;
 ```
 
