@@ -6,6 +6,7 @@ Supabaseへの接続を管理し、FastAPIの依存性注入で使用できる
 
 from fastapi import HTTPException, status
 from supabase import Client, create_client
+from supabase.lib.client_options import ClientOptions
 
 from app.config import settings
 
@@ -28,15 +29,15 @@ def get_supabase_client() -> Client:
             detail="Supabase configuration is incomplete",
         )
 
+    options = ClientOptions(
+        auto_refresh_token=False,
+        persist_session=False,
+    )
+
     return create_client(
         settings.supabase_url,
         settings.supabase_secret_key,
-        options={
-            "auth": {
-                "auto_refresh_token": False,
-                "persist_session": False,
-            }
-        },
+        options=options,
     )
 
 

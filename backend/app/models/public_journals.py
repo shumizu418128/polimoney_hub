@@ -4,7 +4,6 @@ Supabaseのpublic_journalsテーブルから取得したデータを
 表現するためのPydanticモデル。
 """
 
-from datetime import date
 from typing import Optional
 from uuid import UUID
 
@@ -37,7 +36,7 @@ class PublicJournal(BaseModel):
     id: UUID
     ledger_id: UUID
     journal_source_id: UUID
-    date: date
+    date: Optional[str] = None
     description: Optional[str] = None
     amount: int
     contact_name: Optional[str] = None

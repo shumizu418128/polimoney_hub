@@ -4,7 +4,7 @@ public_journalsとpublic_ledgersテーブルから取得したデータを
 レスポンス形式に変換するためのスキーマ。
 """
 
-from datetime import date, datetime
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -44,7 +44,7 @@ class ElectionInfo(BaseModel):
     type_name: str
     district_id: UUID
     district_name: str
-    election_date: date
+    election_date: str
 
 
 class ElectionFundsSummary(BaseModel):
@@ -100,7 +100,7 @@ class ElectionFundsDataItem(BaseModel):
     """
 
     data_id: UUID = Field(..., alias="id")
-    date: date
+    date: Optional[str] = None
     amount: int
     category: str
     category_name: str
