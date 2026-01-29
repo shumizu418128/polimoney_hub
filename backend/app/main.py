@@ -1,14 +1,12 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.database import create_tables, init_db
-from app.dependencies.auth import get_current_admin_user
-from app.routers import election_funds, health, profile
+from app.routers import election_funds, health, political_funds
 
 # Configure logging
 logging.basicConfig(
@@ -35,18 +33,6 @@ async def lifespan(app: FastAPI):
         Exception: データベース初期化に失敗した場合
     """
     logger.info("Starting Polimoney API server...")
-
-    # Create database tables
-    if not settings.debug:
-        try:
-            create_tables()
-            init_db()
-            logger.info("Database initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize database: {e}")
-            raise
-    else:
-        logger.warning("Database initialization skipped (DEBUG=true)")
 
     yield
 
@@ -137,26 +123,18 @@ app.include_router(health.router, prefix="/api/v1", tags=["health"])
 #     dependencies=[Depends(get_current_admin_user)],
 # )
 
-# 本来はユーザーのマイページのためのエンドポイント
-# auth0のテストをするためだけのコード
-app.include_router(profile.router, prefix="/api/v1", tags=["profile"])
+# 政治資金収支報告書のデータ取得
+app.include_router(
+    political_funds.router,
+    prefix="/api/v1",
+    tags=["political-funds"],
+)
 
-# app.include_router(
-#     political_funds.router,
-#     prefix="/api/v1/admin",
-#     tags=["political-funds"],
-#     dependencies=[
-#         Depends(get_current_admin_user)
-#     ],  # Will be protected by individual endpoints
-# )
-
+# 選挙運動費用収支報告書のデータ取得
 app.include_router(
     election_funds.router,
-    prefix="/api/v1/admin",
+    prefix="/api/v1",
     tags=["election-funds"],
-    dependencies=[
-        Depends(get_current_admin_user)
-    ],  # Will be protected by individual endpoints
 )
 
 
@@ -176,6 +154,5 @@ async def root():
     """
     return {
         "message": "Welcome to Polimoney API",
-        "docs": "/docs",
         "health": "/api/v1/health",
     }

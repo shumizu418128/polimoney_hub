@@ -2,8 +2,7 @@
 
 - 言語：Python 3.11+
 - フレームワーク：FastAPI
-- 認証：Auth0
-- データベース：Azure SQL Database
+- データベース：Supabase
 - ORM：SQLAlchemy 2.0 + Alembic
 - コンテナ化：Docker & docker-compose
 
@@ -12,31 +11,8 @@
 ### 前提条件
 
 - Python 3.11+
-- Auth0 アカウント
-- Azure SQL Database アカウント
+- Supabase アカウント
 - Docker & Docker Compose (オプション)
-
-### Auth0の設定
-
-1. **Auth0アカウントの作成**
-   - [Auth0](https://auth0.com/)でアカウントを作成
-
-2. **APIの作成**
-   - Auth0ダッシュボードで「Applications」→「APIs」→「Create API」
-   - Name: `Polimoney API`
-   - Identifier: `https://api.polimoney.com` (任意のURL)
-   - Signing Algorithm: `RS256`
-
-3. **アプリケーションの作成**
-   - Auth0ダッシュボードで「Applications」→「Applications」→「Create Application」
-   - Name: `Polimoney Frontend`
-   - Type: `Single Page Application`
-   - Allowed Callback URLs, Allowed Logout URLs, Allowed Web Originsを設定
-
-4. **必要な情報を取得**
-   - Domain: `your-tenant.auth0.com`
-   - API Audience: `https://api.polimoney.com`
-   - Client ID: アプリケーションのClient ID
 
 ### 環境変数の設定
 
@@ -44,7 +20,7 @@
 
 ```bash
 cp .env.example .env
-# .envファイルを編集してAuth0とAzure SQL Databaseの接続情報を設定
+# .envファイルを編集してSupabaseの接続情報を設定
 ```
 
 ## Docker Composeで起動（推奨）
@@ -97,19 +73,9 @@ Docker Composeを使わずにローカルで実行する場合：
 
 以下の環境変数を`.env`ファイルに設定してください：
 
-### Auth0設定
-
-```bash
-AUTH0_DOMAIN=your-tenant.auth0.com
-AUTH0_API_AUDIENCE=https://api.polimoney.com
-AUTH0_CLIENT_ID=your-client-id
-AUTH0_ISSUER=https://your-tenant.auth0.com/
-AUTH0_ALGORITHMS=["RS256"]
-```
-
 ### データベース設定
 
-Azure SQL Databaseを使用しています：
+Supabaseを使用しています：
 
 ```bash
 # 接続文字列形式
@@ -256,8 +222,7 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ) -> models.User:
-    # Auth0トークン検証とユーザー取得
-    payload = verify_auth0_token(credentials.credentials)
+    # トークン検証とユーザー取得
     # ...
 ```
 
@@ -278,11 +243,7 @@ def get_current_user(
 
 | 変数名 | 説明 | 必須 |
 |--------|------|------|
-| `AUTH0_DOMAIN` | Auth0テナントドメイン | ○ |
-| `AUTH0_API_AUDIENCE` | Auth0 API識別子 | ○ |
-| `AUTH0_CLIENT_ID` | Auth0クライアントID | ○ |
-| `AUTH0_ISSUER` | Auth0発行者URL | ○ |
-| `DATABASE_URL` | Azure SQL Database接続文字列 | ○ |
+| `DATABASE_URL` | Supabase接続文字列 | ○ |
 | `ENV` | 実行環境 (development/production) | △ |
 | `DEBUG` | デバッグモード | △ |
 | `CORS_ORIGINS` | 許可するオリジンのリスト | △ |

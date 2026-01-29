@@ -1,113 +1,180 @@
-from typing import List
+"""政治資金収支報告書のAPIエンドポイント
+
+public_journalsとpublic_ledgersテーブルから政治資金データを取得する。
+"""
+
+from datetime import datetime
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from supabase import Client
 
-from app import models, schemas
-from app.dependencies.auth import get_current_admin_user, get_db
+from app import schemas
+from app.database.supabase import get_supabase_client_dep
+from app.models.public_journals import PublicJournal
+from app.models.public_ledgers import PublicLedger
+from app.utils.category import derive_category, get_category_name
 
 router = APIRouter()
 
 
-@router.post("/political-funds", response_model=schemas.PoliticalFunds)
-async def create_political_funds(
-    political_funds_data: schemas.PoliticalFundsCreate,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_admin_user),
-):
-    """政治資金データを新規作成する（管理者専用）
-
-    政治資金収支報告書のデータをデータベースに登録する。
-    作成したユーザーのIDを自動的に設定する。
-
-    Args:
-        political_funds_data (schemas.PoliticalFundsCreate): 作成する政治資金データ
-        db (Session): データベースセッション
-        current_user (models.User): 管理者権限を持つ現在認証されているユーザー
-
-    Returns:
-        schemas.PoliticalFunds: 作成された政治資金データ
-
-    Raises:
-        HTTPException: データ作成に失敗した場合
-            - 500: データベースエラー等のサーバーエラー
-    """
-    try:
-        db_political_funds = models.PoliticalFunds(
-            user_id=current_user.id, **political_funds_data.model_dump()
-        )
-
-        db.add(db_political_funds)
-        db.commit()
-        db.refresh(db_political_funds)
-
-        return db_political_funds
-    except Exception:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="政治資金データの作成に失敗しました",
-        )
-
-
-@router.get("/political-funds", response_model=List[schemas.PoliticalFunds])
-async def get_political_funds(
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_admin_user),
-):
-    """全政治資金データのリストを取得する（管理者専用）
-
-    ページネーション機能付きで全政治資金データのリストを返却する。
-
-    Args:
-        skip (int): スキップするレコード数（デフォルト: 0）
-        limit (int): 取得する最大レコード数（デフォルト: 100）
-        db (Session): データベースセッション
-        current_user (models.User): 管理者権限を持つ現在認証されているユーザー
-
-    Returns:
-        List[schemas.PoliticalFunds]: 政治資金データのリスト
-    """
-    political_funds = db.query(models.PoliticalFunds).offset(skip).limit(limit).all()
-    return political_funds
-
-
 @router.get(
-    "/political-funds/{political_funds_id}", response_model=schemas.PoliticalFunds
+    "/political-funds/{ledger_id}",
+    response_model=schemas.PoliticalFundsResponse,
 )
-async def get_political_funds_by_id(
-    political_funds_id: int,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_admin_user),
+async def get_political_funds_by_ledger_id(
+    ledger_id: UUID,
+    supabase: Client = Depends(get_supabase_client_dep),
 ):
-    """指定したIDの政治資金データを取得する（管理者専用）
+    """指定した台帳IDの政治資金データを取得する
 
-    政治資金データIDを指定して特定のデータを取得する。
+    public_ledgersのIDを指定して、関連するpublic_journalsと
+    政治団体情報、政治家情報を取得する。
 
     Args:
-        political_funds_id (int): 取得する政治資金データのID
-        db (Session): データベースセッション
-        current_user (models.User): 管理者権限を持つ現在認証されているユーザー
+        ledger_id: 台帳ID（public_ledgers.id）
+        supabase: Supabaseクライアント
 
     Returns:
-        schemas.PoliticalFunds: 指定された政治資金データ
+        schemas.PoliticalFundsResponse: 政治資金データ
 
     Raises:
         HTTPException: 指定されたデータが見つからない場合
-            - 404: 政治資金データが存在しない場合
+            - 404: 台帳が存在しない場合、または政治団体の台帳でない場合
     """
-    political_funds = (
-        db.query(models.PoliticalFunds)
-        .filter(models.PoliticalFunds.id == political_funds_id)
-        .first()
+    # 1. public_ledgersを取得（organization_idがNULLでないことを確認）
+    ledger_response = (
+        supabase.table("public_ledgers")
+        .select("*")
+        .eq("id", str(ledger_id))
+        .not_.is_("organization_id", "null")
+        .single()
+        .execute()
     )
 
-    if not political_funds:
+    if not ledger_response.data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="政治資金データが見つかりません",
+            detail="政治資金の台帳が見つかりません",
         )
 
-    return political_funds
+    ledger = PublicLedger(**ledger_response.data)
+
+    # 2. 政治家情報を取得
+    politician_response = (
+        supabase.table("politicians")
+        .select("id, name, name_kana")
+        .eq("id", str(ledger.politician_id))
+        .single()
+        .execute()
+    )
+
+    if not politician_response.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="政治家情報が見つかりません",
+        )
+
+    politician = schemas.PoliticianInfo(**politician_response.data)
+
+    # 3. 政治団体情報を取得
+    organization_response = (
+        supabase.table("organizations")
+        .select("id, name, type")
+        .eq("id", str(ledger.organization_id))
+        .single()
+        .execute()
+    )
+
+    if not organization_response.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="政治団体情報が見つかりません",
+        )
+
+    organization = schemas.OrganizationInfo(**organization_response.data)
+
+    # 4. public_journalsを取得
+    journals_response = (
+        supabase.table("public_journals")
+        .select("*")
+        .eq("ledger_id", str(ledger_id))
+        .order("date", desc=False)
+        .execute()
+    )
+
+    if not journals_response.data:
+        journals_data = []
+    else:
+        journals_data = journals_response.data
+
+    # 5. account_codesを一括取得（必要なaccount_codeのリストを作成）
+    account_codes_list = [
+        journal_data.get("account_code")
+        for journal_data in journals_data
+        if journal_data.get("account_code")
+    ]
+    account_codes_map = {}
+    if account_codes_list:
+        account_codes_response = (
+            supabase.table("account_codes")
+            .select("code, name")
+            .in_("code", account_codes_list)
+            .execute()
+        )
+        if account_codes_response.data:
+            account_codes_map = {
+                item["code"]: item["name"] for item in account_codes_response.data
+            }
+
+    # 6. データを変換
+    data_items = []
+    for journal_data in journals_data:
+        journal = PublicJournal(**journal_data)
+
+        # account_codeからcategoryを導出
+        category = derive_category(journal.account_code)
+        category_name = get_category_name(category)
+
+        # account_codesテーブルから取得した名前があれば使用
+        if journal.account_code and journal.account_code in account_codes_map:
+            category_name = account_codes_map[journal.account_code]
+
+        # public_expense_amountが0の場合はNoneにする
+        public_expense_amount = journal.public_expense_amount
+        if public_expense_amount == 0:
+            public_expense_amount = None
+
+        data_item = schemas.PoliticalFundsDataItem(
+            id=journal.id,
+            date=journal.date,
+            amount=journal.amount,
+            category=category,
+            category_name=category_name,
+            type="政治活動",
+            purpose=journal.description,
+            non_monetary_basis=journal.non_monetary_basis,
+            note=journal.note,
+            public_expense_amount=public_expense_amount,
+        )
+        data_items.append(data_item)
+
+    # 7. サマリー情報を作成
+    summary = schemas.PoliticalFundsSummary(
+        total_income=ledger.total_income,
+        total_expense=ledger.total_expense,
+        balance=ledger.total_income - ledger.total_expense,
+        journal_count=ledger.journal_count,
+    )
+
+    # 8. メタ情報を作成
+    meta = schemas.PoliticalFundsMeta(
+        api_version="v1",
+        politician=politician,
+        organization=organization,
+        summary=summary,
+        generated_at=datetime.now(),
+    )
+
+    # 9. レスポンスを作成
+    return schemas.PoliticalFundsResponse(meta=meta, data=data_items)

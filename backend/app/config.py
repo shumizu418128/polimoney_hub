@@ -10,24 +10,6 @@ class Settings(BaseSettings):
     アプリケーション全体の設定を管理するクラス。
     """
 
-    # Database settings
-    database_server: str = Field(..., env="DATABASE_SERVER")
-    database_name: str = Field(..., env="DATABASE_NAME")
-    database_user: str = Field(..., env="DATABASE_USER")
-    database_password: str = Field(..., env="DATABASE_PASSWORD")
-    database_driver: str = Field(
-        "{ODBC Driver 18 for SQL Server}", env="DATABASE_DRIVER"
-    )
-
-    # Or use connection string directly
-    database_url: Optional[str] = Field(None, env="DATABASE_URL")
-
-    # Auth0 settings
-    auth0_domain: str = Field(..., env="AUTH0_DOMAIN")
-    auth0_api_audience: str = Field(..., env="AUTH0_API_AUDIENCE")
-    auth0_algorithms: str = Field(..., env="AUTH0_ALGORITHMS")
-    auth0_issuer: str = Field(..., env="AUTH0_ISSUER")
-
     # Application settings
     env: str = Field("development", env="ENV")
     debug: bool = Field(True, env="DEBUG")
@@ -41,6 +23,13 @@ class Settings(BaseSettings):
         ["http://localhost:3000", "http://localhost:8080"], env="CORS_ORIGINS"
     )
 
+    # Supabase settings
+    supabase_url: Optional[str] = Field(None, env="SUPABASE_URL")
+    supabase_secret_key: Optional[str] = Field(None, env="SUPABASE_SECRET_KEY")
+    supabase_publishable_key: Optional[str] = Field(
+        None, env="SUPABASE_PUBLISHABLE_KEY"
+    )
+
     class Config:
         """Pydantic設定
 
@@ -49,25 +38,6 @@ class Settings(BaseSettings):
 
         env_file = ".env"
         case_sensitive = False
-
-    @property
-    def sqlalchemy_database_url(self) -> str:
-        """SQLAlchemyデータベースURLを生成する
-
-        Azure SQL Database用の接続文字列を生成する。
-
-        Returns:
-            str: SQLAlchemyデータベースURL
-        """
-        if self.database_url:
-            return self.database_url
-
-        # Build connection string for Azure SQL Database
-        return (
-            f"mssql+pyodbc://{self.database_user}:{self.database_password}@"
-            f"{self.database_server}/{self.database_name}?"
-            f"driver={self.database_driver}"
-        )
 
 
 # Global settings instance

@@ -52,11 +52,10 @@ class User(UserBase):
 
     ユーザーの全フィールドを含むレスポンス用スキーマ。
     データベースから取得したユーザー情報を表現する。
-    Auth0のユーザーIDと関連するロール情報も含む。
+    関連するロール情報も含む。
     """
 
     id: int
-    auth0_user_id: str
     role: Role
     is_active: bool
     email_verified: bool
@@ -76,15 +75,3 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
     email_verified: Optional[bool] = None
-
-
-# Auth0 Config schema
-class Auth0Config(BaseModel):
-    """Auth0設定スキーマ
-
-    フロントエンドがAuth0を初期化するために必要な設定情報。
-    """
-
-    domain: str
-    client_id: str
-    audience: str
