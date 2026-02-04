@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS public_journals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ledger_id UUID NOT NULL REFERENCES public_ledgers(id),
     journal_source_id UUID NOT NULL UNIQUE,
-    date DATE NOT NULL,
+    date DATE,
     description TEXT,
     amount INT NOT NULL,
     contact_name TEXT,
