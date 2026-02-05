@@ -3,7 +3,7 @@
 - 言語：Python 3.11+
 - フレームワーク：FastAPI
 - データベース：Supabase
-- ORM：SQLAlchemy 2.0 + Alembic
+- データアクセス：Supabase Pythonクライアント + Pydanticモデル（非ORM）
 - コンテナ化：Docker & docker-compose
 
 ## セットアップ手順
@@ -56,14 +56,7 @@ Docker Composeを使わずにローカルで実行する場合：
 
    ```
 
-3. **データベースマイグレーション** (必要なら)
-
-   ```bash
-   # マイグレーション実行
-   alembic upgrade head
-   ```
-
-4. **サーバーの起動**
+3. **サーバーの起動**
 
    ```bash
    python -m uvicorn app.main:app --reload
@@ -75,18 +68,12 @@ Docker Composeを使わずにローカルで実行する場合：
 
 ### データベース設定
 
-Supabaseを使用しています：
+Supabaseを使用しています。最低限、以下の環境変数を設定してください：
 
 ```bash
-# 接続文字列形式
-DATABASE_URL=mssql+pyodbc://username:password@server.database.windows.net/database?driver=ODBC+Driver+18+for+SQL+Server
-
-# または個別設定
-DATABASE_SERVER=your-server.database.windows.net
-DATABASE_NAME=your-database-name
-DATABASE_USER=your-username
-DATABASE_PASSWORD=your-password
-DATABASE_DRIVER={ODBC Driver 18 for SQL Server}
+SUPABASE_URL=https://xxxxx.supabase.co
+SUPABASE_SECRET_KEY=your-service-role-key
+SUPABASE_PUBLISHABLE_KEY=your-anon-key
 ```
 
 ### アプリケーション設定
@@ -126,20 +113,19 @@ pytest tests/test_auth.py
 backend/
 ├── app/
 │   ├── main.py                 # FastAPIアプリケーション
-│   ├── config.py               # 設定管理
-│   ├── database.py             # DB接続・セッション管理
-│   ├── models/                 # SQLAlchemyモデル
-│   ├── schemas/                # Pydanticスキーマ
+│   ├── config.py               # 設定管理（Pydantic Settings）
+│   ├── core/                   # 認証・セキュリティなどのコア機能
+│   ├── database/
+│   │   └── supabase.py         # Supabaseクライアント設定
+│   ├── models/                 # Supabase行を表現するPydanticモデル
+│   ├── schemas/                # APIレスポンス用Pydanticスキーマ
 │   ├── routers/                # APIルーター
-│   ├── core/                   # 認証・セキュリティ
-│   ├── dependencies/           # 依存性注入
 │   └── utils/                  # ユーティリティ
 ├── tests/                      # テスト
-├── alembic/                    # DBマイグレーション
-├── scripts/                    # ユーティリティスクリプト
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
+├── run.py
 └── pytest.ini
 ```
 
@@ -179,12 +165,12 @@ backend/
 - **主なファイル**: `auth.py` (AuthService), `security.py`
 
 #### 3. データアクセス層 (Data Access Layer)
-**場所**: `app/models/`, `app/database.py`
-**役割**: データの永続化と取得
-- SQLAlchemyモデル定義
-- データベース接続とセッション管理
-- CRUD操作の実行
-- **主なファイル**: `user.py`, `political_funds.py` (モデル定義)
+**場所**: `app/database/`, `app/models/`
+**役割**: Supabaseを介したデータの取得
+- Supabase Pythonクライアントの設定
+- Supabaseテーブル行を表現するPydanticモデル
+- データ取得用のクエリ/関数
+- **主なファイル**: `database/supabase.py`, `models/public_journals.py`, `models/public_ledgers.py`
 
 ### 補助層
 
@@ -243,7 +229,7 @@ def get_current_user(
 
 | 変数名 | 説明 | 必須 |
 |--------|------|------|
-| `DATABASE_URL` | Supabase接続文字列 | ○ |
+| `SUPABASE_URL` | SupabaseプロジェクトURL | ○ |
 | `ENV` | 実行環境 (development/production) | △ |
 | `DEBUG` | デバッグモード | △ |
 | `CORS_ORIGINS` | 許可するオリジンのリスト | △ |
