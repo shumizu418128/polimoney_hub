@@ -1,0 +1,83 @@
+name: Deploy Backend to Azure Container Apps
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  CONTAINER_APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+  ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
+  ACR_LOGIN_SERVER: ${{ vars.AZURE_ACR_LOGIN_SERVER }}
+  IMAGE_NAME: polimoney-hub-backend
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: az acr login --name "${ACR_NAME}"
+
+      - name: Build image
+        run: |
+          docker build \
+            -f backend/Dockerfile \
+            -t "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${{ github.sha }}" \
+            -t "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:latest" \
+            backend
+
+      - name: Push image
+        run: |
+          docker push "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${{ github.sha }}"
+          docker push "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:latest"
+
+      - name: Deploy to Container Apps
+        run: |
+          az containerapp update \
+            --name "${CONTAINER_APP_NAME}" \
+            --resource-group "${RESOURCE_GROUP}" \
+            --image "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${{ github.sha }}"
+
+      # Optional: set secrets and env vars (run once or when changes needed)
+      # - name: Update secrets
+      #   run: |
+      #     az containerapp secret set \
+      #       --name "${CONTAINER_APP_NAME}" \
+      #       --resource-group "${RESOURCE_GROUP}" \
+      #       --secrets \
+      #         SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+      #         SUPABASE_SECRET_KEY="${{ secrets.SUPABASE_SECRET_KEY }}" \
+      #         SUPABASE_PUBLISHABLE_KEY="${{ secrets.SUPABASE_PUBLISHABLE_KEY }}"
+      #
+      # - name: Update env vars
+      #   run: |
+      #     az containerapp update \
+      #       --name "${CONTAINER_APP_NAME}" \
+      #       --resource-group "${RESOURCE_GROUP}" \
+      #       --set-env-vars \
+      #         ENV=production \
+      #         DEBUG=false \
+      #         HOST=0.0.0.0 \
+      #         PORT=8000 \
+      #         CORS_ORIGINS='["https://your-domain.example"]' \
+      #         SUPABASE_URL=secretref:SUPABASE_URL \
+      #         SUPABASE_SECRET_KEY=secretref:SUPABASE_SECRET_KEY \
+      #         SUPABASE_PUBLISHABLE_KEY=secretref:SUPABASE_PUBLISHABLE_KEY
