@@ -7,7 +7,7 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # アプリケーションコードコピー
-COPY backend/ .
+COPY . .
 
 # ポート公開
 EXPOSE 8000
