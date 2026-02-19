@@ -112,7 +112,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Include routers
-app.include_router(health.router, prefix="/api/v1", tags=["health"])
+app.include_router(health.router, tags=["health"])
 
 # app.include_router(auth.router, prefix="/api/v1", tags=["authentication"])
 
@@ -154,5 +154,5 @@ async def root():
     """
     return {
         "message": "Welcome to Polimoney API",
-        "health": "/api/v1/health",
+        "health": "/health",
     }
