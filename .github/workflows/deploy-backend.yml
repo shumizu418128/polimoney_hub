@@ -54,6 +54,6 @@ jobs:
           az containerapp update \
             --name "${CONTAINER_APP_NAME}" \
             --resource-group "${RESOURCE_GROUP}" \
-            --image "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${{ github.sha }}"
+            --image "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${{ github.sha }}" \
             --registry-server "${ACR_LOGIN_SERVER}" \
             --registry-identity system \
