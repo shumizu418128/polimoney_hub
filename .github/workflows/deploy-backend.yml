@@ -55,3 +55,4 @@ jobs:
             --name "${CONTAINER_APP_NAME}" \
             --resource-group "${RESOURCE_GROUP}" \
             --image "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${{ github.sha }}"
+            --registry-identity system
