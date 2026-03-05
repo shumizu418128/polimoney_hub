@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional
 
 from pydantic import Field
@@ -42,3 +43,7 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
+
+print("SUPABASE_URL: ", bool(os.getenv("SUPABASE_URL")))
+print("SUPABASE_SECRET_KEY: ", bool(os.getenv("SUPABASE_SECRET_KEY")))
+print("SUPABASE_PUBLISHABLE_KEY: ", bool(os.getenv("SUPABASE_PUBLISHABLE_KEY")))
