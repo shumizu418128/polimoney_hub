@@ -44,9 +44,9 @@ class Settings(BaseSettings):
 # Global settings instance
 settings = Settings()
 
-print(f"SUPABASE_URL: {bool(os.getenv('SUPABASE_URL'))}", flash=True)
-print(f"SUPABASE_SECRET_KEY: {bool(os.getenv('SUPABASE_SECRET_KEY'))}", flash=True)
+print(f"SUPABASE_URL: {bool(os.getenv('SUPABASE_URL'))}", flush=True)
+print(f"SUPABASE_SECRET_KEY: {bool(os.getenv('SUPABASE_SECRET_KEY'))}", flush=True)
 print(
     f"SUPABASE_PUBLISHABLE_KEY: {bool(os.getenv('SUPABASE_PUBLISHABLE_KEY'))}",
-    flash=True,
+    flush=True,
 )
