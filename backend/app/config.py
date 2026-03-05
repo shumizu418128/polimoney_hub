@@ -45,6 +45,3 @@ settings = Settings()
 
 print(f"SUPABASE_URL: {repr(settings.supabase_url)}", flush=True)
 print(f"SUPABASE_SECRET_KEY: {repr(settings.supabase_secret_key)}", flush=True)
-print(
-    f"SUPABASE_PUBLISHABLE_KEY: {repr(settings.supabase_publishable_key)}", flush=True
-)
