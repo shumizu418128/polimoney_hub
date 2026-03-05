@@ -49,13 +49,13 @@ def get_supabase_client() -> Client:
     Raises:
         HTTPException: Supabase設定が不完全な場合。
     """
-    if not settings.supabase_publishable_key:
+    if not settings.supabase_secret_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Supabase publishable key is not configured",
+            detail="Supabase secret key is not configured",
         )
 
-    return _create_supabase_client(settings.supabase_publishable_key)
+    return _create_supabase_client(settings.supabase_secret_key)
 
 
 def get_supabase_client_dep() -> Client:
