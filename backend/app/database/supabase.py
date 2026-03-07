@@ -33,7 +33,6 @@ def _create_supabase_client(api_key: str) -> Client:
         auto_refresh_token=False,
         persist_session=False,
     )
-    print(settings.supabase_url, flush=True)
 
     return create_client(settings.supabase_url, api_key, options=options)
 
@@ -53,7 +52,7 @@ def get_supabase_client() -> Client:
     if not settings.supabase_publishable_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Supabase secret key is not configured",
+            detail="Supabase publishable key is not configured",
         )
 
     return _create_supabase_client(settings.supabase_publishable_key)

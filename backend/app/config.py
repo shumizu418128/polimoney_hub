@@ -29,7 +29,6 @@ class Settings(BaseSettings):
     supabase_publishable_key: Optional[str] = Field(
         None, env="SUPABASE_PUBLISHABLE_KEY"
     )
-    supabase_anon_key: Optional[str] = Field(None, env="SUPABASE_ANON_KEY")
 
     class Config:
         """Pydantic設定
@@ -43,7 +42,3 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
-
-print(f"SUPABASE_URL: {repr(settings.supabase_url)}", flush=True)
-print(f"SUPABASE_SECRET_KEY: {repr(settings.supabase_secret_key)}", flush=True)
-print(f"SUPABASE_ANON_KEY: {repr(settings.supabase_anon_key)}", flush=True)
