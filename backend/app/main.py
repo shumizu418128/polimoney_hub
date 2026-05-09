@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -138,4 +139,5 @@ async def root():
 async def health_check():
     return {
         "status": "ok",
+        "timestamp": datetime.now().isoformat(),
     }
